@@ -1,0 +1,243 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Identidade visual inspirada no Oxystage:
+ * azul #0747de, navy #002c57, fundo #fdfdfd, bordas #e6e6e6,
+ * texto #383839, texto secundário #919192, destaque claro #ebf3ff
+ * e pares suaves de status (verde / amarelo / vermelho).
+ */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-dm-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-dm-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  /* Marca e status */
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-navy: var(--navy);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-surface: var(--surface);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@theme {
+  --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-fade-in: fade-in 0.4s ease-out both;
+  --animate-fade-up: fade-up 0.6s var(--ease-out-expo) both;
+  --animate-pop-in: pop-in 0.18s var(--ease-out-expo) both;
+  --animate-shimmer: shimmer 1.4s ease-in-out infinite;
+  --animate-grow-x: grow-x 1.2s var(--ease-out-expo) both;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+  }
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px) scale(0.97);
+    }
+  }
+  @keyframes shimmer {
+    from {
+      background-position: 100% 0;
+    }
+    to {
+      background-position: 0 0;
+    }
+  }
+  @keyframes grow-x {
+    from {
+      transform: scaleX(0);
+    }
+  }
+}
+
+:root {
+  --radius: 0.75rem;
+
+  --background: #fdfdfd;
+  --foreground: #383839;
+  --surface: #f6f6f6;
+  --card: #fdfdfd;
+  --card-foreground: #383839;
+  --popover: #ffffff;
+  --popover-foreground: #383839;
+  --primary: #0747de;
+  --primary-foreground: #fdfdfd;
+  --secondary: #f6f6f6;
+  --secondary-foreground: #383839;
+  --muted: #f6f6f6;
+  --muted-foreground: #8a8a8c;
+  --accent: #ebf3ff;
+  --accent-foreground: #0747de;
+  --destructive: #ba2f2a;
+  --border: #e6e6e6;
+  --input: #e6e6e6;
+  --ring: #0747de;
+
+  --brand: #0747de;
+  --brand-soft: #ebf3ff;
+  --navy: #002c57;
+  --success: #05842b;
+  --success-soft: #ebfbee;
+  --warning: #b87700;
+  --warning-soft: #fff3e7;
+  --danger: #ba2f2a;
+  --danger-soft: #ffeeea;
+
+  --series-1: #0747de;
+  --series-2: #d68b00;
+  --chart-1: #0747de;
+  --chart-2: #002c57;
+  --chart-3: #05842b;
+  --chart-4: #d68b00;
+  --chart-5: #ba2f2a;
+
+  --sidebar: #fdfdfd;
+  --sidebar-foreground: #383839;
+  --sidebar-primary: #0747de;
+  --sidebar-primary-foreground: #fdfdfd;
+  --sidebar-accent: #ebf3ff;
+  --sidebar-accent-foreground: #0747de;
+  --sidebar-border: #e6e6e6;
+  --sidebar-ring: #0747de;
+}
+
+.dark {
+  --background: #0d1117;
+  --foreground: #e6e8eb;
+  --surface: #151b24;
+  --card: #111720;
+  --card-foreground: #e6e8eb;
+  --popover: #151b24;
+  --popover-foreground: #e6e8eb;
+  --primary: #4d7dff;
+  --primary-foreground: #0b1020;
+  --secondary: #1a2130;
+  --secondary-foreground: #e6e8eb;
+  --muted: #1a2130;
+  --muted-foreground: #9198a3;
+  --accent: #14244a;
+  --accent-foreground: #8fb0ff;
+  --destructive: #ff6b62;
+  --border: #252d3a;
+  --input: #2b3443;
+  --ring: #4d7dff;
+
+  --brand: #4d7dff;
+  --brand-soft: #14244a;
+  --navy: #8fb0ff;
+  --success: #4cc46f;
+  --success-soft: #11291b;
+  --warning: #f0b04a;
+  --warning-soft: #2e2311;
+  --danger: #ff6b62;
+  --danger-soft: #331715;
+
+  --series-1: #4d7dff;
+  --series-2: #c4842a;
+  --chart-1: #4d7dff;
+  --chart-2: #8fb0ff;
+  --chart-3: #4cc46f;
+  --chart-4: #f0b04a;
+  --chart-5: #ff6b62;
+
+  --sidebar: #0f141c;
+  --sidebar-foreground: #e6e8eb;
+  --sidebar-primary: #4d7dff;
+  --sidebar-primary-foreground: #0b1020;
+  --sidebar-accent: #14244a;
+  --sidebar-accent-foreground: #8fb0ff;
+  --sidebar-border: #252d3a;
+  --sidebar-ring: #4d7dff;
+}
+
+@utility skeleton {
+  background-image: linear-gradient(90deg, var(--border) 30%, var(--surface) 50%, var(--border) 70%);
+  background-size: 300% 100%;
+  animation: var(--animate-shimmer);
+}
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
