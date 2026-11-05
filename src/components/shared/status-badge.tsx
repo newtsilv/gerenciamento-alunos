@@ -11,7 +11,7 @@ const toneClasses: Record<Tone, string> = {
   danger: "bg-danger-soft text-danger border-danger/15",
 };
 
-export function StatusBadge({ tone = "neutral", children, className, dot }: { tone?: Tone; children: ReactNode; className?: string; dot?: boolean }) {
+export function StatusBadge({ tone = "neutral", children, className, dot, icon }: { tone?: Tone; children: ReactNode; className?: string; dot?: boolean; icon?: ReactNode }) {
   return (
     <span
       className={cn(
@@ -21,6 +21,7 @@ export function StatusBadge({ tone = "neutral", children, className, dot }: { to
       )}
     >
       {dot && <span className="size-1.5 shrink-0 rounded-full bg-current" />}
+      {icon && <span className="flex shrink-0 [&>svg]:size-3">{icon}</span>}
       <span className="truncate">{children}</span>
     </span>
   );

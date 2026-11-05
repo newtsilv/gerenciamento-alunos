@@ -69,8 +69,8 @@ export function UsersTable({ users, viewerId }: { users: UserRow[]; viewerId: st
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
                     {u.is_admin && (
-                      <StatusBadge tone="info">
-                        <ShieldIcon className="size-3" /> Administrador
+                      <StatusBadge tone="info" icon={<ShieldIcon />}>
+                        Administrador
                       </StatusBadge>
                     )}
                     {u.roles.map((r, i) => (
