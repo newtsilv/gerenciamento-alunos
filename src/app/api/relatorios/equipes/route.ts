@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { authorizeReport, xlsxResponse } from "@/lib/reports/http";
-import { addTableSheet, newWorkbook, safeFileName, toBuffer } from "@/lib/reports/excel";
-import { todayISO } from "@/lib/domain/dates";
+import { addTable, newSheet, newWorkbook, safeFileName, toBuffer, type Column } from "@/lib/reports/excel";
+import { formatDate, todayISO } from "@/lib/domain/dates";
 
 /** Exporta equipes e integrantes (atuais e histórico de participação) em Excel. */
 export async function GET(request: NextRequest) {
@@ -45,19 +45,36 @@ export async function GET(request: NextRequest) {
     .sort((a, b) => a.equipe.localeCompare(b.equipe, "pt-BR", { numeric: true }) || a.aluno.localeCompare(b.aluno, "pt-BR"));
 
   const wb = newWorkbook();
-  const cols = [
-    { header: "Equipe", key: "equipe", width: 12 },
-    { header: "RA", key: "ra", width: 12 },
+  const current = rows.filter((r) => r.situacao === "Ativo");
+  const cols: Column[] = [
+    { header: "Equipe", key: "equipe", width: 12, bold: true },
     { header: "Aluno", key: "aluno", width: 40 },
-    { header: "E-mail", key: "email", width: 30 },
-    { header: "Monitor", key: "monitor", width: 24 },
-    { header: "Projeto", key: "projeto", width: 28 },
-    { header: "Entrada", key: "entrada", width: 12, date: true },
-    { header: "Saída", key: "saida", width: 12, date: true },
-    { header: "Situação", key: "situacao", width: 28 },
+    { header: "RA", key: "ra", width: 12 },
+    ...(rows.some((r) => r.email) ? [{ header: "E-mail", key: "email", width: 30 } as Column] : []),
+    { header: "Monitor", key: "monitor", width: 22, kind: "person" },
+    { header: "Entrada", key: "entrada", width: 13, kind: "date" },
   ];
-  addTableSheet(wb, "Integrantes atuais", cols, rows.filter((r) => r.situacao === "Ativo"));
-  addTableSheet(wb, "Histórico de participação", cols, rows);
+  const subtitle = `Gerado em ${formatDate(todayISO())}`;
+  {
+    const { ws, next } = newSheet(wb, "Integrantes", `Equipes — ${challenge.name}`, subtitle);
+    const teamCount = new Set(current.map((r) => r.equipe)).size;
+    addTable(ws, next, `${teamCount} equipe(s) · ${current.length} aluno(s)`, cols, current, { freeze: true, filter: true });
+  }
+  {
+    const { ws, next } = newSheet(wb, "Histórico", `Histórico de participação — ${challenge.name}`, "Entradas, saídas e transferências entre equipes");
+    addTable(
+      ws,
+      next,
+      `Histórico · ${rows.length} registro(s)`,
+      [
+        ...cols.filter((c) => c.key !== "email" && c.key !== "monitor"),
+        { header: "Saída", key: "saida", width: 13, kind: "date" },
+        { header: "Situação", key: "situacao", width: 26, kind: "pill", tone: (v) => (v === "Ativo" ? "success" : "neutral") },
+      ],
+      rows,
+      { freeze: true, filter: true },
+    );
+  }
   const buffer = await toBuffer(wb);
   return xlsxResponse(buffer, `equipes-${safeFileName(challenge.name)}-${todayISO()}.xlsx`);
 }

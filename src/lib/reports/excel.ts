@@ -1,25 +1,47 @@
 import ExcelJS from "exceljs";
 import { parseISO } from "date-fns";
 
-/** Utilitários de formatação compartilhados pelos relatórios. */
+/**
+ * Estilo das planilhas: visual de "tabela" moderna (rótulo acima do cabeçalho,
+ * cabeçalho escuro, linhas espaçadas e zebradas, status como "pílulas" coloridas,
+ * pessoas como etiquetas cinza) e sem linhas de grade.
+ */
 
 export const COLORS = {
   brand: "FF0747DE",
-  navy: "FF002C57",
+  navy: "FF0B2545",
   headerText: "FFFFFFFF",
-  zebra: "FFF6F6F6",
-  border: "FFE6E6E6",
-  muted: "FF919192",
-  successSoft: "FFEBFBEE",
-  success: "FF05842B",
-  warningSoft: "FFFFF3E7",
-  warning: "FFB87700",
-  dangerSoft: "FFFFEEEA",
-  danger: "FFBA2F2A",
-  notEvaluated: "FFF2F2F2",
+  text: "FF1F2937",
+  muted: "FF8A9099",
+  zebra: "FFF7F8FA",
+  white: "FFFFFFFF",
+  rule: "FFE3E6EB",
+  outline: "FFC9D3E3",
 };
 
-export type ColumnSpec = { header: string; key: string; width: number; date?: boolean; number?: boolean; wrap?: boolean };
+export type Tone = "success" | "warning" | "danger" | "info" | "neutral" | "muted";
+
+const TONES: Record<Tone, { fill: string; font: string }> = {
+  success: { fill: "FFDDF3E4", font: "FF0B7A35" },
+  warning: { fill: "FFFDF1C7", font: "FF8A5A00" },
+  danger: { fill: "FFFDE2DF", font: "FFB42318" },
+  info: { fill: "FFDCE6FD", font: "FF0747DE" },
+  neutral: { fill: "FFECEEF2", font: "FF374151" },
+  muted: { fill: "FFF2F3F5", font: "FF8A9099" },
+};
+
+export type Column = {
+  header: string;
+  key: string;
+  width: number;
+  /** text (padrão) · center · date · number (nota/média) · delta (variação ▲▼) · pill (status) · person (etiqueta) · wrap (texto longo) */
+  kind?: "text" | "center" | "date" | "number" | "delta" | "pill" | "person" | "wrap";
+  /** Para pílulas: cor de cada valor. */
+  tone?: (value: unknown) => Tone | null;
+  /** Para pílulas: lista de valores possíveis (vira menu suspenso no Excel/Google Sheets). */
+  options?: string[];
+  bold?: boolean;
+};
 
 export function newWorkbook() {
   const wb = new ExcelJS.Workbook();
@@ -28,106 +50,158 @@ export function newWorkbook() {
   return wb;
 }
 
-/** Cria uma aba de tabela com cabeçalho formatado, filtros, congelamento e larguras. */
-export function addTableSheet(wb: ExcelJS.Workbook, name: string, columns: ColumnSpec[], rows: Record<string, unknown>[], opts: { startRow?: number; title?: string } = {}) {
-  const ws = wb.addWorksheet(name, { views: [{ state: "frozen", ySplit: opts.title ? 3 : 1 }] });
-  let headerRowNumber = 1;
-  if (opts.title) {
-    ws.mergeCells(1, 1, 1, Math.max(columns.length, 1));
-    const t = ws.getCell(1, 1);
-    t.value = opts.title;
-    t.font = { bold: true, size: 13, color: { argb: COLORS.navy } };
-    headerRowNumber = 3;
+/** Cria uma aba com título, subtítulo e sem grade. Retorna a próxima linha livre. */
+export function newSheet(wb: ExcelJS.Workbook, name: string, title: string, subtitle?: string) {
+  const ws = wb.addWorksheet(name, { views: [{ showGridLines: false }], properties: { defaultRowHeight: 20 } });
+  const t = ws.getCell(1, 1);
+  t.value = title;
+  t.font = { bold: true, size: 16, color: { argb: COLORS.navy } };
+  ws.getRow(1).height = 28;
+  if (subtitle) {
+    const s = ws.getCell(2, 1);
+    s.value = subtitle;
+    s.font = { size: 10, color: { argb: COLORS.muted } };
   }
-  ws.columns = columns.map((c) => ({ key: c.key, width: c.width }));
+  return { ws, next: subtitle ? 4 : 3 };
+}
+
+/** Estima a altura para textos quebrados (o Excel não ajusta sozinho quando há altura definida). */
+function estimateLines(text: string, width: number) {
+  const perLine = Math.max(8, Math.floor(width * 1.15));
+  return text.split("\n").reduce((n, line) => n + Math.max(1, Math.ceil(line.length / perLine)), 0);
+}
+
+/**
+ * Desenha uma tabela a partir da linha `startRow`: rótulo (chip) + cabeçalho + linhas.
+ * Retorna a linha do cabeçalho e a próxima linha livre (com uma linha de respiro).
+ */
+export function addTable(
+  ws: ExcelJS.Worksheet,
+  startRow: number,
+  label: string,
+  columns: Column[],
+  rows: Record<string, unknown>[],
+  opts: { freeze?: boolean; filter?: boolean; emptyText?: string } = {},
+) {
+  // larguras (a maior largura pedida vence quando há várias tabelas na mesma aba)
+  columns.forEach((c, i) => {
+    const col = ws.getColumn(i + 1);
+    col.width = Math.max(col.width ?? 0, c.width);
+  });
+
+  // rótulo da tabela, como uma "aba" acima do cabeçalho
+  const chipRow = ws.getRow(startRow);
+  chipRow.height = 24;
+  const chip = chipRow.getCell(1);
+  chip.value = label;
+  chip.font = { bold: true, size: 11, color: { argb: COLORS.headerText } };
+  chip.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLORS.brand } };
+  chip.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+
+  // cabeçalho
+  const headerRowNumber = startRow + 1;
   const header = ws.getRow(headerRowNumber);
+  header.height = 28;
   columns.forEach((c, i) => {
     const cell = header.getCell(i + 1);
     cell.value = c.header;
     cell.font = { bold: true, color: { argb: COLORS.headerText } };
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLORS.brand } };
-    cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
-    cell.border = { bottom: { style: "thin", color: { argb: COLORS.navy } } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLORS.navy } };
+    const centered = c.kind === "center" || c.kind === "number" || c.kind === "delta" || c.kind === "pill" || c.kind === "date";
+    cell.alignment = { vertical: "middle", horizontal: centered ? "center" : "left", indent: centered ? 0 : 1, wrapText: true };
   });
-  header.height = 30;
 
-  rows.forEach((r, idx) => {
+  const data = rows.length ? rows : [{ [columns[0].key]: opts.emptyText ?? "Nada para mostrar." }];
+  data.forEach((r, idx) => {
     const row = ws.getRow(headerRowNumber + 1 + idx);
+    const bg = idx % 2 === 1 ? COLORS.zebra : COLORS.white;
+    let lines = 1;
     columns.forEach((c, i) => {
       const cell = row.getCell(i + 1);
       const v = r[c.key];
-      if (c.date && typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
+      const gap = { style: "thick" as const, color: { argb: bg } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
+      cell.font = { color: { argb: COLORS.text }, bold: c.bold };
+      cell.border = { bottom: { style: "thin", color: { argb: COLORS.rule } } };
+      cell.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+
+      if (!rows.length) {
+        cell.value = i === 0 ? (v as string) : "";
+        cell.font = { italic: true, color: { argb: COLORS.muted } };
+        return;
+      }
+
+      if (c.kind === "date" && typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
         cell.value = parseISO(v);
         cell.numFmt = "dd/mm/yyyy";
-      } else {
-        cell.value = (v ?? "") as ExcelJS.CellValue;
+        cell.alignment = { vertical: "middle", horizontal: "center" };
+        return;
       }
-      if (c.number && typeof v === "number") cell.numFmt = Number.isInteger(v) ? "0" : "0.0";
-      cell.alignment = { vertical: "top", wrapText: c.wrap ?? false, horizontal: c.number ? "center" : undefined };
-      cell.border = { bottom: { style: "hair", color: { argb: COLORS.border } } };
-      if (idx % 2 === 1) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLORS.zebra } };
+      cell.value = (v ?? "") as ExcelJS.CellValue;
+      if (c.kind === "center") {
+        cell.alignment = { vertical: "middle", horizontal: "center" };
+        return;
+      }
+
+      if (c.kind === "number" || c.kind === "delta") {
+        cell.alignment = { vertical: "middle", horizontal: "center" };
+        if (typeof v === "number") {
+          cell.numFmt = c.kind === "delta" ? '"▲ "0.0;"▼ "0.0;"= "0.0' : Number.isInteger(v) ? "0" : "0.0";
+          const color =
+            c.kind === "delta" ? (v > 0 ? TONES.success.font : v < 0 ? TONES.danger.font : COLORS.muted) : v >= 4 ? TONES.success.font : v <= 2 ? TONES.danger.font : COLORS.text;
+          cell.font = { bold: c.bold || c.kind === "delta", color: { argb: color } };
+        } else if (v) {
+          cell.font = { italic: true, color: { argb: COLORS.muted } };
+        }
+        return;
+      }
+
+      if ((c.kind === "pill" || c.kind === "person") && v) {
+        const tone = c.kind === "person" ? "neutral" : (c.tone?.(v) ?? "neutral");
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: TONES[tone].fill } };
+        cell.font = { bold: c.kind === "pill", color: { argb: TONES[tone].font }, italic: tone === "muted" };
+        cell.border = { top: gap, bottom: gap, left: gap, right: gap };
+        cell.alignment = { vertical: "middle", horizontal: c.kind === "pill" ? "center" : "left", indent: c.kind === "pill" ? 0 : 1 };
+        if (c.kind === "pill" && c.options?.length) {
+          cell.dataValidation = { type: "list", allowBlank: true, formulae: [`"${c.options.join(",")}"`], showErrorMessage: false };
+        }
+        return;
+      }
+
+      if (c.kind === "wrap" && typeof v === "string" && v) {
+        cell.alignment = { vertical: "middle", horizontal: "left", indent: 1, wrapText: true };
+        lines = Math.max(lines, estimateLines(v, c.width));
+      }
     });
+    row.height = Math.max(24, lines * 15 + 8);
   });
 
-  if (columns.length) {
-    ws.autoFilter = {
-      from: { row: headerRowNumber, column: 1 },
-      to: { row: headerRowNumber + Math.max(rows.length, 0), column: columns.length },
-    };
+  // contorno discreto da tabela
+  const last = headerRowNumber + data.length;
+  for (let r = headerRowNumber + 1; r <= last; r++) {
+    const first = ws.getRow(r).getCell(1);
+    first.border = { ...first.border, left: { style: "thin", color: { argb: COLORS.outline } } };
+    const end = ws.getRow(r).getCell(columns.length);
+    end.border = { ...end.border, right: { style: "thin", color: { argb: COLORS.outline } } };
   }
-  return { ws, headerRowNumber };
+  columns.forEach((_, i) => {
+    const cell = ws.getRow(last).getCell(i + 1);
+    cell.border = { ...cell.border, bottom: { style: "thin", color: { argb: COLORS.outline } } };
+  });
+
+  if (opts.freeze) ws.views = [{ state: "frozen", ySplit: headerRowNumber, showGridLines: false }];
+  if (opts.filter && rows.length) {
+    ws.autoFilter = { from: { row: headerRowNumber, column: 1 }, to: { row: last, column: columns.length } };
+  }
+  return { headerRowNumber, next: last + 3 };
 }
 
-export function fillRow(row: ExcelJS.Row, argb: string, fromCol = 1, toCol?: number) {
-  const last = toCol ?? row.cellCount;
-  for (let c = fromCol; c <= last; c++) {
-    row.getCell(c).fill = { type: "pattern", pattern: "solid", fgColor: { argb } };
-  }
-}
-
-export function highlightCell(cell: ExcelJS.Cell, tone: "success" | "warning" | "danger" | "muted") {
-  const map = {
-    success: [COLORS.successSoft, COLORS.success],
-    warning: [COLORS.warningSoft, COLORS.warning],
-    danger: [COLORS.dangerSoft, COLORS.danger],
-    muted: [COLORS.notEvaluated, COLORS.muted],
-  } as const;
-  const [bg, fg] = map[tone];
-  cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
-  cell.font = { ...(cell.font ?? {}), color: { argb: fg }, bold: tone !== "muted" };
-}
-
-/** Aba no formato "chave: valor" para resumos. */
-export function addSummarySheet(wb: ExcelJS.Workbook, name: string, title: string, sections: { heading: string; items: [string, string | number, ("success" | "warning" | "danger" | "muted")?][] }[]) {
-  const ws = wb.addWorksheet(name);
-  ws.columns = [{ width: 44 }, { width: 60 }];
-  ws.mergeCells("A1:B1");
-  const t = ws.getCell("A1");
-  t.value = title;
-  t.font = { bold: true, size: 15, color: { argb: COLORS.navy } };
-  let r = 3;
-  for (const s of sections) {
-    ws.mergeCells(r, 1, r, 2);
-    const h = ws.getCell(r, 1);
-    h.value = s.heading;
-    h.font = { bold: true, color: { argb: COLORS.headerText } };
-    h.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLORS.brand } };
-    r++;
-    for (const [label, value, tone] of s.items) {
-      const row = ws.getRow(r);
-      row.getCell(1).value = label;
-      row.getCell(1).font = { color: { argb: COLORS.navy } };
-      const vc = row.getCell(2);
-      vc.value = value;
-      vc.alignment = { wrapText: true, vertical: "top", horizontal: "left" };
-      if (tone) highlightCell(vc, tone);
-      row.getCell(1).border = { bottom: { style: "hair", color: { argb: COLORS.border } } };
-      vc.border = { bottom: { style: "hair", color: { argb: COLORS.border } } };
-      r++;
-    }
-    r++;
-  }
-  return ws;
+/** Nota de rodapé em cinza, abaixo das tabelas. */
+export function addNote(ws: ExcelJS.Worksheet, row: number, text: string) {
+  const c = ws.getCell(row, 1);
+  c.value = text;
+  c.font = { italic: true, size: 9, color: { argb: COLORS.muted } };
+  return row + 2;
 }
 
 export async function toBuffer(wb: ExcelJS.Workbook): Promise<Buffer> {

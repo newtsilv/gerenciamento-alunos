@@ -77,18 +77,18 @@ describe("relatório diário", () => {
   const wb = buildDailyWorkbook(fixture(), "2026-11-04");
 
   it("gera as quatro abas", () => {
-    expect(wb.worksheets.map((w) => w.name)).toEqual(["Resumo Geral", "Avaliações Individuais", "Avaliações das Equipes", "Pendências"]);
+    expect(wb.worksheets.map((w) => w.name)).toEqual(["Resumo", "Equipes", "Alunos", "Pendências"]);
   });
 
   it("aluno sem avaliação aparece como 'Não avaliado', sem nota zero", () => {
-    const rows = rowsOf(wb.getWorksheet("Avaliações Individuais")!);
+    const rows = rowsOf(wb.getWorksheet("Alunos")!);
     const maria = rows.find((r) => r[0] === "Maria")!;
     expect(maria).toContain(NOT_EVALUATED);
     expect(maria).not.toContain(0);
   });
 
   it("'Não observado' sai como N/O e fica fora da média", () => {
-    const rows = rowsOf(wb.getWorksheet("Avaliações Individuais")!);
+    const rows = rowsOf(wb.getWorksheet("Alunos")!);
     const joao = rows.find((r) => r[0] === "João")!;
     expect(joao).toContain("N/O");
     expect(joao).toContain(2); // média = 2 (somente a1)
@@ -102,24 +102,34 @@ describe("relatório diário", () => {
 });
 
 describe("relatório semanal", () => {
-  const wb = buildWeeklyWorkbook(fixture(), { start: "2026-11-02", end: "2026-11-08" });
+  const wb = buildWeeklyWorkbook(fixture(), { start: "2026-11-02", end: "2026-11-08" }, "2026-11-08");
+
+  it("gera as quatro abas", () => {
+    expect(wb.worksheets.map((w) => w.name)).toEqual(["Resumo", "Equipes", "Alunos", "Pendências"]);
+  });
 
   it("consolida evolução individual com transferência e variação", () => {
-    const rows = rowsOf(wb.getWorksheet("Evolução Individual")!);
+    const rows = rowsOf(wb.getWorksheet("Alunos")!);
     const joao = rows.find((r) => r[0] === "João")!;
-    expect(joao[2]).toBe("Equipe 01 → Equipe 04");
+    expect(joao[1]).toBe("Equipe 01 → Equipe 04");
     expect(joao).toContain(2); // variação 2 → 4
   });
 
   it("diferencia ausência de avaliação de nota baixa", () => {
-    const rows = rowsOf(wb.getWorksheet("Evolução das Equipes")!);
+    const rows = rowsOf(wb.getWorksheet("Equipes")!);
     const e01 = rows.find((r) => r[0] === "Equipe 01")!;
     expect(e01).toContain("Não avaliado");
     expect(e01).toContain("Não comparável");
   });
 
   it("marca dificuldades recorrentes", () => {
-    const rows = rowsOf(wb.getWorksheet("Dificuldades Recorrentes")!);
-    expect(rows.find((r) => r[2] === "João")?.at(-1)).toBe("Sim");
+    const rows = rowsOf(wb.getWorksheet("Alunos")!);
+    expect(rows.find((r) => r[0] === "João")).toContain("Sim");
+  });
+
+  it("ignora dias da semana que ainda não aconteceram", () => {
+    const partial = buildWeeklyWorkbook(fixture(), { start: "2026-11-02", end: "2026-11-08" }, "2026-11-05");
+    const header = rowsOf(partial.getWorksheet("Equipes")!).find((r) => r[0] === "Equipe")!;
+    expect(header.some((h) => String(h).includes("06/11"))).toBe(false);
   });
 });

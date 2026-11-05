@@ -106,8 +106,8 @@ export function TeamsBoard({
           <MembersDialog challengeId={challengeId} members={members} people={people} trigger={<Button size="sm" className="shrink-0" />} label="Vincular monitores" />
         </div>
       )}
-      <div className="flex flex-col gap-3 2xl:flex-row 2xl:items-center 2xl:justify-between">
-        <div className="grid flex-1 gap-2 sm:grid-cols-[1fr_220px] lg:max-w-2xl">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[minmax(12rem,1fr)_200px] lg:max-w-2xl">
           <div className="relative">
             <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -129,15 +129,15 @@ export function TeamsBoard({
           </NativeSelect>
         </div>
         {canManage && (
-          <div className="flex flex-wrap gap-2">
-            <MembersDialog challengeId={challengeId} members={members} people={people} />
+          <div className="flex flex-wrap gap-2 lg:shrink-0">
+            <MembersDialog challengeId={challengeId} members={members} people={people} label="Monitores" />
             <Button
               variant="outline"
               disabled={pending || monitors.length === 0}
               onClick={() => startTransition(async () => void toastResult(await distributeTeams(challengeId)))}
             >
               <ShuffleIcon />
-              Distribuir entre monitores
+              Distribuir
             </Button>
             <Button variant="outline" render={<Link href={`/desafios/${challengeId}/equipes/importar`} />}>
               Importar planilha

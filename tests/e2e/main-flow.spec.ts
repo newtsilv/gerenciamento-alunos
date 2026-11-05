@@ -167,8 +167,8 @@ test("fluxo completo do monitor/administrador", async ({ page }) => {
 
   // 9. Relatórios Excel reais
   for (const [url, sheets] of [
-    [`/api/relatorios/diario?desafio=${challengeId}&data=${today}`, ["Resumo Geral", "Avaliações Individuais", "Avaliações das Equipes", "Pendências"]],
-    [`/api/relatorios/semanal?desafio=${challengeId}&semana=${today}`, ["Resumo", "Evolução das Equipes", "Evolução Individual", "Dificuldades Recorrentes", "Pendências"]],
+    [`/api/relatorios/diario?desafio=${challengeId}&data=${today}`, ["Resumo", "Equipes", "Alunos", "Pendências"]],
+    [`/api/relatorios/semanal?desafio=${challengeId}&semana=${today}`, ["Resumo", "Equipes", "Alunos", "Pendências"]],
   ] as const) {
     const res = await page.request.get(url);
     expect(res.status()).toBe(200);
@@ -183,8 +183,8 @@ test("fluxo completo do monitor/administrador", async ({ page }) => {
   const daily = await page.request.get(`/api/relatorios/diario?desafio=${challengeId}&data=${today}`);
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load((await daily.body()) as never);
-  const ind = wb.getWorksheet("Avaliações Individuais")!;
+  const ind = wb.getWorksheet("Alunos")!;
   const rows: string[] = [];
-  ind.eachRow((r) => rows.push(String(r.getCell(1).value) + "|" + String(r.getCell(3).value)));
+  ind.eachRow((r) => rows.push(String(r.getCell(1).value) + "|" + String(r.getCell(2).value)));
   expect(rows).toContain(`${studentName}|Equipe 04`);
 });
