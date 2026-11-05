@@ -747,8 +747,8 @@ export function EvaluationForm(props: EvaluationFormProps) {
 
       {/* Barra de ações fixa */}
       {canEdit && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 backdrop-blur-md lg:left-64">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-10">
+        <div className="fixed inset-x-3 bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+4.75rem)] z-30 rounded-2xl border bg-background/95 shadow-lg backdrop-blur-md lg:inset-x-0 lg:bottom-0 lg:left-64 lg:rounded-none lg:border-x-0 lg:border-b-0 lg:shadow-none">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-2.5 sm:px-6 lg:px-10 lg:py-3">
             <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
               {saving ? (
                 <>

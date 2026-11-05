@@ -16,7 +16,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         isCoordinator={isCoordinatorAnywhere(viewer)}
       />
       <NavigationHistory />
-      <main className="flex min-w-0 flex-1 flex-col">{children}</main>
+      <main className="flex min-w-0 flex-1 flex-col pb-28 lg:pb-0">{children}</main>
     </div>
   );
 }

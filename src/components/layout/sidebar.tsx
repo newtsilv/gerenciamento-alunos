@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MenuIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
 import { buildNav } from "./nav-config";
 import { UserCard, type SidebarUser } from "./user-card";
+import { BottomNav } from "./bottom-nav";
 
 function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -44,73 +43,20 @@ function Nav({ items }: { items: ReturnType<typeof buildNav> }) {
 }
 
 export function Sidebar({ user, isAdmin, isCoordinator }: { user: SidebarUser; isAdmin: boolean; isCoordinator: boolean }) {
-  const [open, setOpen] = useState(false);
   const items = buildNav({ isAdmin, isCoordinator });
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    document.body.style.overflow = "hidden";
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = "";
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  function closeOnLink(e: MouseEvent) {
-    if ((e.target as HTMLElement).closest("a")) setOpen(false);
-  }
-
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background/90 px-4 backdrop-blur-md sm:px-6 lg:hidden">
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-label="Abrir menu"
-          aria-expanded={open}
-          aria-controls="app-sidebar"
-          className="-ml-2 rounded-lg p-2 transition-colors active:bg-surface"
-        >
-          <MenuIcon className="size-6" />
-        </button>
+      <header className="sticky top-0 z-30 flex h-14 items-center border-b bg-background/90 px-4 backdrop-blur-md lg:hidden">
         <Logo />
-        <span className="w-8" />
       </header>
-
-      <div
-        aria-hidden
-        onClick={() => setOpen(false)}
-        className={cn(
-          "fixed inset-0 z-40 bg-navy/40 backdrop-blur-[2px] transition-opacity duration-300 lg:hidden",
-          open ? "opacity-100" : "pointer-events-none opacity-0",
-        )}
-      />
-
-      <aside
-        id="app-sidebar"
-        onClick={closeOnLink}
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[min(18rem,85vw)] flex-col border-r bg-sidebar py-6 pl-5 transition-[translate,visibility] duration-300 ease-out-expo",
-          "lg:visible lg:sticky lg:top-0 lg:h-dvh lg:w-64 lg:shrink-0 lg:translate-x-0 lg:pt-8",
-          open ? "visible translate-x-0 shadow-2xl" : "invisible -translate-x-full",
-        )}
-      >
-        <div className="flex items-center justify-between pr-4">
+      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r bg-sidebar py-8 pl-5 lg:flex">
+        <div className="pr-4">
           <Logo />
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            aria-label="Fechar menu"
-            className="rounded-lg p-2 text-muted-foreground transition-colors active:bg-surface lg:hidden"
-          >
-            <XIcon className="size-6" />
-          </button>
         </div>
         <Nav items={items} />
         <UserCard user={user} />
       </aside>
+      <BottomNav user={user} isAdmin={isAdmin} isCoordinator={isCoordinator} />
     </>
   );
 }

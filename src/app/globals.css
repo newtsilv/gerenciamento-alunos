@@ -241,3 +241,17 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ------------------------------------------------------------------
+ * Navegação inferior (celular): bolha flutuante com recorte na barra
+ * ------------------------------------------------------------------ */
+:root {
+  --nav-bar: #ffffff;
+  --nav-bubble: var(--brand);
+  --nav-bubble-fg: #ffffff;
+}
+.dark {
+  --nav-bar: #1f2633;
+  --nav-bubble: #1f2633;
+  --nav-bubble-fg: var(--brand);
+}
