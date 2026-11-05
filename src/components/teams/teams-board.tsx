@@ -28,6 +28,8 @@ import { NativeSelect } from "@/components/shared/native-select";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { toastResult } from "@/components/shared/toast-result";
+import { MembersDialog } from "@/components/challenges/members-dialog";
+import type { MembersManagerProps } from "@/components/challenges/members-manager";
 import { assignMonitor, deleteTeam, distributeTeams, reactivateTeam } from "@/lib/actions/teams";
 import { TeamDialog } from "./team-dialog";
 import { AddStudentDialog } from "./add-student-dialog";
@@ -49,6 +51,8 @@ export function TeamsBoard({
   challengeId,
   teams,
   monitors,
+  members,
+  people,
   canManage,
   viewerId,
   challengeStartDate,
@@ -57,6 +61,8 @@ export function TeamsBoard({
   challengeId: string;
   teams: BoardTeam[];
   monitors: { id: string; name: string }[];
+  members: MembersManagerProps["members"];
+  people: MembersManagerProps["people"];
   canManage: boolean;
   viewerId: string;
 }) {
@@ -92,7 +98,15 @@ export function TeamsBoard({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      {canManage && monitors.length === 0 && (
+        <div className="flex flex-col gap-3 rounded-xl border border-warning/40 bg-warning-soft px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            <strong>Nenhum monitor vinculado a este desafio.</strong> Vincule as pessoas como <em>Monitor</em> para escolher quem acompanha cada equipe.
+          </p>
+          <MembersDialog challengeId={challengeId} members={members} people={people} trigger={<Button size="sm" className="shrink-0" />} label="Vincular monitores" />
+        </div>
+      )}
+      <div className="flex flex-col gap-3 2xl:flex-row 2xl:items-center 2xl:justify-between">
         <div className="grid flex-1 gap-2 sm:grid-cols-[1fr_220px] lg:max-w-2xl">
           <div className="relative">
             <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -116,9 +130,10 @@ export function TeamsBoard({
         </div>
         {canManage && (
           <div className="flex flex-wrap gap-2">
+            <MembersDialog challengeId={challengeId} members={members} people={people} />
             <Button
               variant="outline"
-              disabled={pending}
+              disabled={pending || monitors.length === 0}
               onClick={() => startTransition(async () => void toastResult(await distributeTeams(challengeId)))}
             >
               <ShuffleIcon />

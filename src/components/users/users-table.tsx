@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { KeyRoundIcon, PencilIcon, Loader2Icon, MoreHorizontalIcon, PlusIcon, SearchIcon, ShieldIcon, UserCheckIcon, UserXIcon } from "lucide-react";
+import { BriefcaseIcon, KeyRoundIcon, PencilIcon, Loader2Icon, MoreHorizontalIcon, PlusIcon, SearchIcon, ShieldIcon, UserCheckIcon, UserXIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -11,6 +11,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Field } from "@/components/shared/field";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { toastResult } from "@/components/shared/toast-result";
+import { addChallengeMember } from "@/lib/actions/challenges";
+import { NativeSelect } from "@/components/shared/native-select";
 import { createUser, resetPassword, updateUser, updateUserIdentity } from "@/lib/actions/users";
 import { userIdentitySchema, userSchema, type UserIdentityInput, type UserInput } from "@/lib/validation";
 import { CHALLENGE_ROLE, type ChallengeRole } from "@/lib/domain/constants";
@@ -26,10 +28,11 @@ export type UserRow = {
   roles: { challenge: string; role: ChallengeRole }[];
 };
 
-export function UsersTable({ users, viewerId }: { users: UserRow[]; viewerId: string }) {
+export function UsersTable({ users, viewerId, challenges }: { users: UserRow[]; viewerId: string; challenges: { id: string; name: string }[] }) {
   const [q, setQ] = useState("");
   const [pwdUser, setPwdUser] = useState<UserRow | null>(null);
   const [editUser, setEditUser] = useState<UserRow | null>(null);
+  const [roleUser, setRoleUser] = useState<UserRow | null>(null);
   const [, startTransition] = useTransition();
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -93,6 +96,9 @@ export function UsersTable({ users, viewerId }: { users: UserRow[]; viewerId: st
                       <MoreHorizontalIcon />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem onClick={() => setRoleUser(u)}>
+                        <BriefcaseIcon /> Dar cargo em desafio
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setEditUser(u)}>
                         <PencilIcon /> Editar nome e RA
                       </DropdownMenuItem>
@@ -120,6 +126,7 @@ export function UsersTable({ users, viewerId }: { users: UserRow[]; viewerId: st
           </tbody>
         </table>
       </div>
+      {roleUser && <RoleDialog user={roleUser} challenges={challenges} onClose={() => setRoleUser(null)} />}
       {editUser && <EditUserDialog user={editUser} onClose={() => setEditUser(null)} />}
       {pwdUser && <PasswordDialog user={pwdUser} onClose={() => setPwdUser(null)} />}
     </div>
@@ -245,6 +252,57 @@ function EditUserDialog({ user, onClose }: { user: UserRow; onClose: () => void 
             Salvar
           </Button>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function RoleDialog({ user, challenges, onClose }: { user: UserRow; challenges: { id: string; name: string }[]; onClose: () => void }) {
+  const [challengeId, setChallengeId] = useState(challenges[0]?.id ?? "");
+  const [role, setRole] = useState<ChallengeRole>("monitor");
+  const [pending, startTransition] = useTransition();
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Dar cargo em desafio</DialogTitle>
+          <DialogDescription>{user.full_name}</DialogDescription>
+        </DialogHeader>
+        {challenges.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Crie um desafio primeiro.</p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <Field label="Desafio" required>
+              <NativeSelect value={challengeId} onChange={(e) => setChallengeId(e.target.value)}>
+                {challenges.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </NativeSelect>
+            </Field>
+            <Field label="Cargo" required>
+              <NativeSelect value={role} onChange={(e) => setRole(e.target.value as ChallengeRole)}>
+                {(Object.keys(CHALLENGE_ROLE) as ChallengeRole[]).map((r) => (
+                  <option key={r} value={r}>
+                    {CHALLENGE_ROLE[r]}
+                  </option>
+                ))}
+              </NativeSelect>
+            </Field>
+            <Button
+              disabled={pending || !challengeId}
+              onClick={() =>
+                startTransition(async () => {
+                  if (toastResult(await addChallengeMember({ challenge_id: challengeId, user_id: user.id, role }))) onClose();
+                })
+              }
+            >
+              {pending && <Loader2Icon className="animate-spin" />}
+              Salvar cargo
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

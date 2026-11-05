@@ -72,6 +72,7 @@ export async function addChallengeMember(input: z.infer<typeof memberSchema>): P
     return fail(error.code === "23505" ? "Esta pessoa já possui este papel no desafio." : dbError(error));
   }
   revalidatePath(`/desafios/${parsed.data.challenge_id}`, "layout");
+  revalidatePath("/usuarios");
   return ok(undefined, "Membro vinculado ao desafio.");
 }
 

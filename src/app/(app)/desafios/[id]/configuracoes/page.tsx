@@ -6,8 +6,7 @@ import { ChallengeForm } from "@/components/challenges/challenge-form";
 import { MembersManager } from "@/components/challenges/members-manager";
 import { DeleteChallengeButton } from "@/components/challenges/delete-challenge-button";
 import { requireChallengeAccess } from "@/lib/auth";
-import { getChallenge } from "@/lib/data/challenges";
-import { createClient } from "@/lib/supabase/server";
+import { allMembers, getChallenge, listLinkablePeople } from "@/lib/data/challenges";
 
 export default async function ChallengeSettingsPage({ params }: PageProps<"/desafios/[id]/configuracoes">) {
   const { id } = await params;
@@ -16,18 +15,7 @@ export default async function ChallengeSettingsPage({ params }: PageProps<"/desa
   const challenge = await getChallenge(id);
   if (!challenge) notFound();
 
-  const supabase = await createClient();
-  const { data: people } = await supabase.from("profiles").select("id, full_name, email, login").eq("active", true).order("full_name");
-
-  const members = challenge.challenge_members
-    .filter((m) => m.profiles)
-    .map((m) => ({
-      memberId: m.id,
-      id: m.user_id,
-      name: m.profiles!.full_name || m.profiles!.email,
-      email: m.profiles!.login ? `RA ${m.profiles!.login}` : m.profiles!.email,
-      role: m.role,
-    }));
+  const [members, people] = [allMembers(challenge), await listLinkablePeople()];
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
@@ -61,7 +49,7 @@ export default async function ChallengeSettingsPage({ params }: PageProps<"/desa
             <MembersManager
               challengeId={id}
               members={members}
-              people={(people ?? []).map((p) => ({ id: p.id, name: p.full_name || p.email, email: p.login ? `RA ${p.login}` : p.email }))}
+              people={people}
             />
           </CardContent>
         </Card>

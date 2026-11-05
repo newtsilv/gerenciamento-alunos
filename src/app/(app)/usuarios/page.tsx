@@ -10,16 +10,20 @@ export const metadata: Metadata = { title: "Usuários" };
 export default async function UsersPage() {
   const viewer = await requireAdmin();
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("profiles")
-    .select("id, full_name, login, email, is_admin, active, challenge_members(role, challenge:challenges(name))")
-    .order("full_name");
+  const [{ data }, { data: challenges }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, full_name, login, email, is_admin, active, challenge_members(role, challenge:challenges(name))")
+      .order("full_name"),
+    supabase.from("challenges").select("id, name").order("start_date", { ascending: false }),
+  ]);
 
   return (
     <PageContainer>
-      <PageHeader title="Usuários" description="Contas de acesso. Vincule as pessoas aos desafios em Desafios › Configurações." />
+      <PageHeader title="Usuários" description="Contas de acesso. Em ⋯ › Dar cargo em desafio, defina quem é monitor, coordenador ou professor." />
       <UsersTable
         viewerId={viewer.id}
+        challenges={challenges ?? []}
         users={(data ?? []).map((u) => ({
           id: u.id,
           full_name: u.full_name || u.email,

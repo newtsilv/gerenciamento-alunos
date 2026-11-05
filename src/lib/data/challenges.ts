@@ -32,6 +32,26 @@ export function membersByRole(challenge: ChallengeDetail, role: "coordenador" | 
     .map((m) => ({ memberId: m.id, id: m.user_id, name: m.profiles!.full_name || m.profiles!.email, email: m.profiles!.login ? `RA ${m.profiles!.login}` : m.profiles!.email }));
 }
 
+/** Todos os vínculos do desafio (para o gerenciador de papéis). */
+export function allMembers(challenge: ChallengeDetail) {
+  return challenge.challenge_members
+    .filter((m) => m.profiles)
+    .map((m) => ({
+      memberId: m.id,
+      id: m.user_id,
+      name: m.profiles!.full_name || m.profiles!.email,
+      email: m.profiles!.login ? `RA ${m.profiles!.login}` : m.profiles!.email,
+      role: m.role,
+    }));
+}
+
+/** Pessoas com conta ativa que podem ser vinculadas a um desafio. */
+export async function listLinkablePeople() {
+  const supabase = await createClient();
+  const { data } = await supabase.from("profiles").select("id, full_name, email, login").eq("active", true).order("full_name");
+  return (data ?? []).map((p) => ({ id: p.id, name: p.full_name || p.email, email: p.login ? `RA ${p.login}` : p.email }));
+}
+
 export async function listTeams(challengeId: string, opts: { includeInactive?: boolean } = {}) {
   const supabase = await createClient();
   let query = supabase

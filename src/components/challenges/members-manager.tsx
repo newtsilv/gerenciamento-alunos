@@ -12,7 +12,9 @@ import { CHALLENGE_ROLE, type ChallengeRole } from "@/lib/domain/constants";
 type Member = { memberId: string; id: string; name: string; email: string; role: ChallengeRole };
 type Person = { id: string; name: string; email: string };
 
-export function MembersManager({ challengeId, members, people }: { challengeId: string; members: Member[]; people: Person[] }) {
+export type MembersManagerProps = { challengeId: string; members: Member[]; people: Person[] };
+
+export function MembersManager({ challengeId, members, people }: MembersManagerProps) {
   const [userId, setUserId] = useState("");
   const [role, setRole] = useState<ChallengeRole>("monitor");
   const [pending, startTransition] = useTransition();
