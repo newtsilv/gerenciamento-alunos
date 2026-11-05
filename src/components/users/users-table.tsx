@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { KeyRoundIcon, Loader2Icon, MoreHorizontalIcon, PlusIcon, SearchIcon, ShieldIcon, UserCheckIcon, UserXIcon } from "lucide-react";
+import { KeyRoundIcon, PencilIcon, Loader2Icon, MoreHorizontalIcon, PlusIcon, SearchIcon, ShieldIcon, UserCheckIcon, UserXIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -11,8 +11,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Field } from "@/components/shared/field";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { toastResult } from "@/components/shared/toast-result";
-import { createUser, resetPassword, updateUser } from "@/lib/actions/users";
-import { userSchema, type UserInput } from "@/lib/validation";
+import { createUser, resetPassword, updateUser, updateUserIdentity } from "@/lib/actions/users";
+import { userIdentitySchema, userSchema, type UserIdentityInput, type UserInput } from "@/lib/validation";
 import { CHALLENGE_ROLE, type ChallengeRole } from "@/lib/domain/constants";
 
 export type UserRow = {
@@ -29,6 +29,7 @@ export type UserRow = {
 export function UsersTable({ users, viewerId }: { users: UserRow[]; viewerId: string }) {
   const [q, setQ] = useState("");
   const [pwdUser, setPwdUser] = useState<UserRow | null>(null);
+  const [editUser, setEditUser] = useState<UserRow | null>(null);
   const [, startTransition] = useTransition();
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -92,6 +93,9 @@ export function UsersTable({ users, viewerId }: { users: UserRow[]; viewerId: st
                       <MoreHorizontalIcon />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem onClick={() => setEditUser(u)}>
+                        <PencilIcon /> Editar nome e RA
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setPwdUser(u)}>
                         <KeyRoundIcon /> Redefinir senha
                       </DropdownMenuItem>
@@ -116,6 +120,7 @@ export function UsersTable({ users, viewerId }: { users: UserRow[]; viewerId: st
           </tbody>
         </table>
       </div>
+      {editUser && <EditUserDialog user={editUser} onClose={() => setEditUser(null)} />}
       {pwdUser && <PasswordDialog user={pwdUser} onClose={() => setPwdUser(null)} />}
     </div>
   );
@@ -201,6 +206,45 @@ function PasswordDialog({ user, onClose }: { user: UserRow; onClose: () => void 
           {pending && <Loader2Icon className="animate-spin" />}
           Salvar nova senha
         </Button>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditUserDialog({ user, onClose }: { user: UserRow; onClose: () => void }) {
+  const [pending, startTransition] = useTransition();
+  const form = useForm<UserIdentityInput>({
+    resolver: zodResolver(userIdentitySchema),
+    defaultValues: { full_name: user.full_name, login: user.login ?? "" },
+  });
+  const e = form.formState.errors;
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Editar nome e RA</DialogTitle>
+          <DialogDescription>A senha continua a mesma. Depois de salvar, a pessoa entra com o novo RA.</DialogDescription>
+        </DialogHeader>
+        <form
+          className="flex flex-col gap-4"
+          noValidate
+          onSubmit={form.handleSubmit((v) =>
+            startTransition(async () => {
+              if (toastResult(await updateUserIdentity(user.id, v))) onClose();
+            }),
+          )}
+        >
+          <Field label="Nome completo" required error={e.full_name?.message}>
+            <Input {...form.register("full_name")} />
+          </Field>
+          <Field label="RA" required error={e.login?.message}>
+            <Input autoCapitalize="none" {...form.register("login")} />
+          </Field>
+          <Button type="submit" disabled={pending}>
+            {pending && <Loader2Icon className="animate-spin" />}
+            Salvar
+          </Button>
+        </form>
       </DialogContent>
     </Dialog>
   );

@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireViewer } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { technicalEmailFor } from "@/lib/auth-provider";
-import { fieldErrors, firstError, userSchema, type UserInput } from "@/lib/validation";
+import { TECHNICAL_EMAIL_DOMAIN, technicalEmailFor } from "@/lib/auth-provider";
+import { fieldErrors, firstError, userIdentitySchema, userSchema, type UserIdentityInput, type UserInput } from "@/lib/validation";
 import { dbError, fail, ok, type ActionResult } from "./result";
 
 async function guardAdmin() {
@@ -73,4 +73,31 @@ export async function resetPassword(userId: string, password: string): Promise<A
   const { error } = await admin.auth.admin.updateUserById(userId, { password });
   if (error) return fail(error.message);
   return ok(undefined, "Senha redefinida.");
+}
+
+/** Corrige nome e RA. Para contas com e-mail técnico, o e-mail de login acompanha o novo RA. */
+export async function updateUserIdentity(userId: string, input: UserIdentityInput): Promise<ActionResult> {
+  if (!(await guardAdmin())) return fail("Apenas administradores gerenciam usuários.");
+  const parsed = userIdentitySchema.safeParse(input);
+  if (!parsed.success) return fail(firstError(parsed.error), fieldErrors(parsed.error));
+  const { full_name, login } = parsed.data;
+
+  const admin = createAdminClient();
+  const { data: current } = await admin.from("profiles").select("id, login, email").eq("id", userId).maybeSingle();
+  if (!current) return fail("Usuário não encontrado.");
+  const { data: clash } = await admin.from("profiles").select("id").ilike("login", login).neq("id", userId).maybeSingle();
+  if (clash) return fail("Já existe outro usuário com este RA.");
+
+  let email = current.email as string;
+  if (email.endsWith(`@${TECHNICAL_EMAIL_DOMAIN}`)) {
+    email = technicalEmailFor(login);
+    if (email !== current.email) {
+      const { error } = await admin.auth.admin.updateUserById(userId, { email, email_confirm: true, user_metadata: { full_name, login } });
+      if (error) return fail(error.message);
+    }
+  }
+  const { error } = await admin.from("profiles").update({ full_name, login, email }).eq("id", userId);
+  if (error) return fail(dbError(error));
+  revalidatePath("/usuarios");
+  return ok(undefined, "Dados atualizados.");
 }

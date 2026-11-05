@@ -68,6 +68,8 @@ export const userSchema = z.object({
   is_admin: z.boolean(),
 });
 export type UserInput = z.infer<typeof userSchema>;
+export const userIdentitySchema = userSchema.pick({ full_name: true, login: true });
+export type UserIdentityInput = z.infer<typeof userIdentitySchema>;
 
 const score = z.number().int().min(1).max(5).nullable(); // null = "Não observado"
 
