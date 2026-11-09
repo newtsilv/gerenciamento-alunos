@@ -4,15 +4,16 @@ import { Stagger, StaggerItem } from "@/components/shared/motion";
 import { useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { BriefcaseIcon, KeyRoundIcon, PencilIcon, Loader2Icon, MoreHorizontalIcon, PlusIcon, SearchIcon, ShieldIcon, UserCheckIcon, UserXIcon } from "lucide-react";
+import { BriefcaseIcon, KeyRoundIcon, PencilIcon, Loader2Icon, MoreHorizontalIcon, PlusIcon, SearchIcon, ShieldIcon, UserCheckIcon, UserXIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Field } from "@/components/shared/field";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { toastResult } from "@/components/shared/toast-result";
-import { addChallengeMember } from "@/lib/actions/challenges";
+import { addChallengeMember, removeChallengeMember } from "@/lib/actions/challenges";
 import { NativeSelect } from "@/components/shared/native-select";
 import { createUser, resetPassword, updateUser, updateUserIdentity } from "@/lib/actions/users";
 import { userIdentitySchema, userSchema, type UserIdentityInput, type UserInput } from "@/lib/validation";
@@ -26,7 +27,7 @@ export type UserRow = {
   technicalEmail: boolean;
   is_admin: boolean;
   active: boolean;
-  roles: { challenge: string; role: ChallengeRole }[];
+  roles: { memberId: string; challengeId: string; challenge: string; role: ChallengeRole }[];
 };
 
 export function UsersTable({ users, viewerId, challenges }: { users: UserRow[]; viewerId: string; challenges: { id: string; name: string }[] }) {
@@ -78,9 +79,27 @@ export function UsersTable({ users, viewerId, challenges }: { users: UserRow[]; 
                         Administrador
                       </StatusBadge>
                     )}
-                    {u.roles.map((r, i) => (
-                      <StatusBadge key={i}>
-                        {CHALLENGE_ROLE[r.role]} · {r.challenge}
+                    {u.roles.map((r) => (
+                      <StatusBadge key={r.memberId} className="pr-1">
+                        <span className="flex items-center gap-1">
+                          {CHALLENGE_ROLE[r.role]} · {r.challenge}
+                          <ConfirmDialog
+                            title="Remover cargo?"
+                            description={`${u.full_name} deixará de ser ${CHALLENGE_ROLE[r.role].toLowerCase()} em ${r.challenge}. Os outros cargos e as avaliações já registradas são mantidos.`}
+                            confirmLabel="Remover cargo"
+                            destructive
+                            onConfirm={async () => toastResult(await removeChallengeMember(r.challengeId, r.memberId))}
+                            trigger={
+                              <button
+                                type="button"
+                                aria-label={`Remover cargo de ${CHALLENGE_ROLE[r.role].toLowerCase()} em ${r.challenge}`}
+                                className="flex size-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-danger-soft hover:text-danger"
+                              >
+                                <XIcon className="size-3" />
+                              </button>
+                            }
+                          />
+                        </span>
                       </StatusBadge>
                     ))}
                     {!u.is_admin && !u.roles.length && <span className="text-xs text-muted-foreground">Sem vínculos</span>}

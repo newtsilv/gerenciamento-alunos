@@ -13,14 +13,14 @@ export default async function UsersPage() {
   const [{ data }, { data: challenges }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, full_name, login, email, is_admin, active, challenge_members(role, challenge:challenges(name))")
+      .select("id, full_name, login, email, is_admin, active, challenge_members(id, role, challenge_id, challenge:challenges(name))")
       .order("full_name"),
     supabase.from("challenges").select("id, name").order("start_date", { ascending: false }),
   ]);
 
   return (
     <PageContainer>
-      <PageHeader title="Usuários" description="Contas de acesso. Em ⋯ › Dar cargo em desafio, defina quem é monitor, coordenador ou professor." />
+      <PageHeader title="Usuários" description="" />
       <UsersTable
         viewerId={viewer.id}
         challenges={challenges ?? []}
@@ -32,7 +32,7 @@ export default async function UsersPage() {
           technicalEmail: u.email.endsWith(`@${TECHNICAL_EMAIL_DOMAIN}`),
           is_admin: u.is_admin,
           active: u.active,
-          roles: u.challenge_members.map((m) => ({ role: m.role, challenge: m.challenge?.name ?? "" })),
+          roles: u.challenge_members.map((m) => ({ memberId: m.id, challengeId: m.challenge_id, role: m.role, challenge: m.challenge?.name ?? "" })),
         }))}
       />
     </PageContainer>

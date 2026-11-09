@@ -80,10 +80,26 @@ export async function removeChallengeMember(challengeId: string, memberId: strin
   const viewer = await requireViewer();
   if (!canManageChallenge(viewer, challengeId)) return fail("Sem permissão.");
   const supabase = await createClient();
-  const { error } = await supabase.from("challenge_members").delete().eq("id", memberId).eq("challenge_id", challengeId);
+  const { data: removed, error } = await supabase
+    .from("challenge_members")
+    .delete()
+    .eq("id", memberId)
+    .eq("challenge_id", challengeId)
+    .select("user_id, role")
+    .maybeSingle();
   if (error) return fail(dbError(error));
+  if (removed?.role === "monitor") {
+    // quem deixou de ser monitor não pode continuar como responsável pelas equipes
+    const { error: teamsError } = await supabase
+      .from("teams")
+      .update({ assigned_monitor_id: null })
+      .eq("challenge_id", challengeId)
+      .eq("assigned_monitor_id", removed.user_id);
+    if (teamsError) return fail(dbError(teamsError));
+  }
   revalidatePath(`/desafios/${challengeId}`, "layout");
-  return ok(undefined, "Vínculo removido.");
+  revalidatePath("/usuarios");
+  return ok(undefined, "Cargo removido.");
 }
 
 /**

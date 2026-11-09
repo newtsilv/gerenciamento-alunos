@@ -20,7 +20,8 @@ export default async function SessionsPage({ params, searchParams }: PageProps<"
   const today = todayISO();
   const totalTeams = teams.length;
 
-  const past = sessions.filter((s) => s.session_date <= today).reverse();
+  // abrir um dia sem registrar nada (por engano, por exemplo) não o coloca na lista
+  const past = sessions.filter((s) => s.session_date <= today && s.team_evaluations.length > 0).reverse();
   const next = sessions.find((s) => s.session_date > today);
   const visible = todos ? past : past.slice(0, PAGE);
   const canOpen = access.canEvaluate || access.canManage;
@@ -86,8 +87,6 @@ export default async function SessionsPage({ params, searchParams }: PageProps<"
                     </div>
                     {done === totalTeams && totalTeams > 0 ? (
                       <StatusBadge tone="success" className="max-sm:hidden">Completo</StatusBadge>
-                    ) : done + draft === 0 ? (
-                      <StatusBadge className="max-sm:hidden">Nada registrado</StatusBadge>
                     ) : null}
                     <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground max-sm:hidden" />
                   </Link>
