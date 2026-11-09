@@ -33,7 +33,7 @@ export default async function SessionsPage({ params, searchParams }: PageProps<"
       <EmptyState
         icon={UsersIcon}
         title="Este desafio ainda não tem equipes"
-        description={access.canManage ? "Importe a planilha com equipes e alunos para começar os acompanhamentos." : "A coordenação ainda não cadastrou as equipes."}
+        description={access.canManage ? "Importe a planilha com equipes e alunos para começar os acompanhamentos." : "A supervisão ainda não cadastrou as equipes."}
         action={access.canManage ? <Button render={<Link href={`/desafios/${id}/equipes/importar`} />}>Importar planilha</Button> : undefined}
       />
     );

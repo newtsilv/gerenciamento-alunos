@@ -219,7 +219,7 @@ export async function updateStudent(studentId: string, input: StudentInput): Pro
  */
 export async function backdateTeamMembers(challengeId: string, teamId: string): Promise<ActionResult<{ updated: number }>> {
   const viewer = await requireViewer();
-  if (!canManageChallenge(viewer, challengeId)) return fail("Peça à coordenação para ajustar a data de entrada dos alunos.");
+  if (!canManageChallenge(viewer, challengeId)) return fail("Peça à supervisão para ajustar a data de entrada dos alunos.");
   const supabase = await createClient();
   const { data: challenge } = await supabase.from("challenges").select("start_date").eq("id", challengeId).single();
   if (!challenge) return fail("Desafio não encontrado.");

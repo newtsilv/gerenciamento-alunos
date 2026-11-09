@@ -30,7 +30,7 @@ export default async function ChallengesPage() {
           description={
             viewer.isAdmin
               ? "Crie o primeiro desafio para cadastrar equipes e iniciar os acompanhamentos."
-              : "Você ainda não foi vinculado a nenhum desafio. Procure a coordenação."
+              : "Você ainda não foi vinculado a nenhum desafio. Procure a supervisão."
           }
           action={viewer.isAdmin ? <NewChallengeDialog /> : undefined}
         />

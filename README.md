@@ -1,6 +1,6 @@
 # Acompanha — Plataforma de Acompanhamento de Desafios Educacionais
 
-Aplicação web para monitores, professores e coordenadores acompanharem equipes de alunos em desafios reais propostos por empresas: avaliação coletiva e individual na mesma tela, histórico preservado (inclusive com transferências), entregas, dashboards e relatórios Excel diários e semanais.
+Aplicação web para monitores, professores e supervisores acompanharem equipes de alunos em desafios reais propostos por empresas: avaliação coletiva e individual na mesma tela, histórico preservado (inclusive com transferências), entregas, dashboards e relatórios Excel diários e semanais.
 
 **Stack:** Next.js 16 (App Router, Server Actions, Route Handlers) · TypeScript · Tailwind CSS 4 · shadcn/ui (Base UI) · Supabase (PostgreSQL, Auth, RLS) · ExcelJS · Recharts · React Hook Form + Zod · Vitest · Playwright.
 
@@ -92,7 +92,7 @@ Comandos úteis: `npm run db:reset` (recria o banco local), `npm run db:types` (
 | Perfil | Escopo | Pode |
 |---|---|---|
 | Administrador | Global (`profiles.is_admin`) | Tudo: usuários, desafios, importação, critérios, relatórios |
-| Coordenador | Por desafio | Ver o desafio, gerenciar equipes/alunos/transferências/critérios, relatórios |
+| Supervisor | Por desafio | Ver o desafio, gerenciar equipes/alunos/transferências/critérios, relatórios |
 | Professor | Por desafio | Consultar equipes e avaliações, observações pedagógicas |
 | Monitor | Por desafio | Avaliar equipes e alunos, corrigir as próprias avaliações |
 

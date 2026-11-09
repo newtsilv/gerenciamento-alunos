@@ -7,7 +7,7 @@ export const CHALLENGE_STATUS = {
 export type ChallengeStatus = keyof typeof CHALLENGE_STATUS;
 
 export const CHALLENGE_ROLE = {
-  coordenador: "Coordenador",
+  coordenador: "Supervisor",
   professor: "Professor",
   monitor: "Monitor",
 } as const;

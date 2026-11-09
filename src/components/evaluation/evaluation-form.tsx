@@ -343,7 +343,7 @@ export function EvaluationForm(props: EvaluationFormProps) {
           Já estavam na equipe desde o início
         </Button>
       ) : (
-        <span className="text-xs text-muted-foreground">Peça à coordenação para ajustar a data de entrada.</span>
+        <span className="text-xs text-muted-foreground">Peça à supervisão para ajustar a data de entrada.</span>
       )}
     </div>
   );

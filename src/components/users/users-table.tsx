@@ -169,7 +169,7 @@ function NewUserDialog() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Novo usuário</DialogTitle>
-          <DialogDescription>O acesso é feito com nome ou RA e senha. Os papéis (coordenador, professor, monitor) são definidos em cada desafio.</DialogDescription>
+          <DialogDescription>O acesso é feito com nome ou RA e senha. Os papéis (supervisor, professor, monitor) são definidos em cada desafio.</DialogDescription>
         </DialogHeader>
         <form
           className="flex flex-col gap-4"

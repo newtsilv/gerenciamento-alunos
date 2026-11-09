@@ -46,7 +46,7 @@ export default async function ChallengeSettingsPage({ params }: PageProps<"/desa
         <Card>
           <CardHeader>
             <CardTitle>Equipe de acompanhamento</CardTitle>
-            <CardDescription>Coordenadores, professores e monitores vinculados. As quantidades são livres.</CardDescription>
+            <CardDescription>Supervisores, professores e monitores vinculados. As quantidades são livres.</CardDescription>
           </CardHeader>
           <CardContent>
             <MembersManager
