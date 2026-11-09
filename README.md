@@ -92,9 +92,9 @@ Comandos úteis: `npm run db:reset` (recria o banco local), `npm run db:types` (
 | Perfil | Escopo | Pode |
 |---|---|---|
 | Administrador | Global (`profiles.is_admin`) | Tudo: usuários, desafios, importação, critérios, relatórios |
-| Coordenador | Por desafio | Ver o desafio, gerenciar equipes/alunos/transferências/critérios/marcos, relatórios |
-| Professor | Por desafio | Consultar equipes e avaliações, atualizar entregas, observações pedagógicas |
-| Monitor | Por desafio | Avaliar equipes e alunos, corrigir as próprias avaliações, atualizar entregas |
+| Coordenador | Por desafio | Ver o desafio, gerenciar equipes/alunos/transferências/critérios, relatórios |
+| Professor | Por desafio | Consultar equipes e avaliações, observações pedagógicas |
+| Monitor | Por desafio | Avaliar equipes e alunos, corrigir as próprias avaliações |
 
 As permissões são aplicadas em três camadas: interface, Server Actions (`src/lib/auth.ts`) e **RLS no Postgres** (fonte da verdade).
 
@@ -103,8 +103,7 @@ As permissões são aplicadas em três camadas: interface, Server Actions (`src/
 - **Desafios:** dados, status, período, dias de acompanhamento (sessões geradas automaticamente), equipe de acompanhamento (quantidades livres).
 - **Equipes:** cadastro, edição, distribuição entre monitores, adicionar/remover/transferir alunos, histórico de participação, exportação Excel.
 - **Importação .xlsx:** seleção de aba, prévia, mapeamento livre de colunas, células mescladas, seleção das equipes a importar, validação, duplicidades (matrícula, e-mail, nome) com revisão manual, confirmação e gravação atômica.
-- **Acompanhamento:** escolha livre do dia (Hoje, Ontem, dias previstos ou qualquer data passada — o dia é criado na hora), planilha de cada dia com um clique, estados Pendente/Em andamento/Concluído, avaliação coletiva + tabela individual editável na mesma tela ("aplicar a todos", N/O, ausente, situação, observações), resumo do acompanhamento anterior e verificação das dificuldades, rascunho com salvamento automático e backup local, histórico de alterações.
-- **Entregas:** marcos personalizáveis aplicados a todas as equipes, entregas específicas, status e matriz de progresso.
+- **Acompanhamento:** escolha livre do dia (Hoje, Ontem, dias previstos ou qualquer data passada — o dia é criado na hora), planilha de cada dia com um clique, estados Pendente/Em andamento/Concluído, avaliação coletiva + tabela individual editável na mesma tela ("aplicar a todos", N/O, ausente, situação, observações), resumo do acompanhamento anterior e verificação das dificuldades, rascunho com salvamento automático e backup local.
 - **Dashboards:** geral e por desafio, com filtros (desafio, equipe, monitor, período, situação) e gráficos.
 - **Relatórios Excel:** diário (4 abas), semanal (7 abas) e equipes — cabeçalhos formatados, filtros, larguras, datas e destaques de atenção.
 

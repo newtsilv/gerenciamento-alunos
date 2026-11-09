@@ -27,7 +27,7 @@ export default async function StudentPage({ params }: PageProps<"/alunos/[studen
     supabase
       .from("student_evaluations")
       .select(
-        "id, absent, followup_status, notes, difficulty, guidance, team:teams(id, name), evaluation_scores(score), team_evaluation:team_evaluations!inner(challenge_id, session:monitoring_sessions!inner(id, session_date), monitor:profiles!team_evaluations_monitor_id_fkey(full_name))",
+        "id, absent, followup_status, activities, deliveries, commitments, notes, difficulty, guidance, team:teams(id, name), evaluation_scores(score), team_evaluation:team_evaluations!inner(challenge_id, session:monitoring_sessions!inner(id, session_date), monitor:profiles!team_evaluations_monitor_id_fkey(full_name))",
       )
       .eq("student_id", studentId),
   ]);
@@ -76,11 +76,14 @@ export default async function StudentPage({ params }: PageProps<"/alunos/[studen
                       {formatDate(e.team_evaluation.session.session_date)} · {e.team?.name}
                     </Link>
                     <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                      {e.absent ? "Ausente" : `Média ${formatAverage(average(e.evaluation_scores.map((s) => s.score)))}`}
+                      {e.absent ? "Ausente" : `Nota ${formatAverage(average(e.evaluation_scores.map((s) => s.score)))}`}
                       {e.followup_status && <StatusBadge tone={FOLLOWUP_TONE[e.followup_status]}>{FOLLOWUP_STATUS[e.followup_status]}</StatusBadge>}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">Monitor: {e.team_evaluation.monitor?.full_name ?? "—"}</p>
+                  {e.activities && <p>Fez: {e.activities}</p>}
+                  {e.deliveries && <p>Entregou: {e.deliveries}</p>}
+                  {e.commitments && <p>Próxima semana: {e.commitments}</p>}
                   {e.difficulty && <p>Dificuldade: {e.difficulty}</p>}
                   {e.guidance && <p className="text-muted-foreground">Orientação: {e.guidance}</p>}
                   {e.notes && <p className="text-muted-foreground">{e.notes}</p>}

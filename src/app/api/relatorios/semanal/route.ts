@@ -18,13 +18,6 @@ export async function GET(request: NextRequest) {
     const data = await loadReportData(auth.supabase, challengeId!, range.start, range.end);
     if (!data) return NextResponse.json({ error: "Desafio não encontrado." }, { status: 404 });
     const buffer = await toBuffer(buildWeeklyWorkbook(data, range));
-    await auth.supabase.from("reports").insert({
-      challenge_id: challengeId!,
-      type: "semanal",
-      period_start: range.start,
-      period_end: range.end,
-      generated_by: auth.viewer.id,
-    });
     return xlsxResponse(buffer, `relatorio-semanal-${safeFileName(data.challenge.name)}-${range.start}.xlsx`);
   } catch (e) {
     console.error("relatório semanal", e);

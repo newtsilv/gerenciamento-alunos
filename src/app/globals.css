@@ -248,10 +248,6 @@
 :root {
   --keyboard-inset: 0px;
 }
-/* espaço extra para os últimos campos conseguirem subir acima do teclado */
-body {
-  padding-bottom: var(--keyboard-inset);
-}
 [data-keyboard-open] .hide-on-keyboard {
   display: none;
 }

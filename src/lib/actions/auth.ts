@@ -7,12 +7,12 @@ import { resolveAuthEmail } from "@/lib/auth-provider";
 import { fail, type ActionResult } from "./result";
 
 const loginSchema = z.object({
-  login: z.string().trim().min(1, "Informe seu RA"),
+  login: z.string().trim().min(1, "Informe seu nome ou RA"),
   password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
   next: z.string().optional(),
 });
 
-const INVALID = "RA ou senha incorretos.";
+const INVALID = "Dados incorretos. Se houver outra pessoa com o mesmo nome, entre com o RA.";
 
 export async function signIn(input: z.infer<typeof loginSchema>): Promise<ActionResult> {
   const parsed = loginSchema.safeParse(input);

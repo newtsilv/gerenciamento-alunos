@@ -12,7 +12,7 @@ export default async function CriteriaPage({ params }: PageProps<"/desafios/[id]
   return (
     <Reveal className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
-        Notas de 1 a 5, com opção “Não observado” (fora da média). Critérios já utilizados são versionados ao serem editados.
+        Notas de 0 a 10, com opção “Não observado” (fora da média). Critérios já utilizados são versionados ao serem editados.
       </p>
       <CriteriaManager challengeId={id} criteria={criteria} />
     </Reveal>

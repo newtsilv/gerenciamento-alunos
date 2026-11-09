@@ -34,6 +34,9 @@ export default async function EvaluationPage({ params }: PageProps<"/desafios/[i
         {
           absent: se.absent,
           followup_status: se.followup_status,
+          activities: se.activities,
+          deliveries: se.deliveries,
+          commitments: se.commitments,
           notes: se.notes,
           difficulty: se.difficulty,
           guidance: se.guidance,
@@ -79,9 +82,6 @@ export default async function EvaluationPage({ params }: PageProps<"/desafios/[i
         canEdit={canEdit}
         lockedReason={lockedReason}
         previous={previous}
-        deliverables={ctx.deliverables}
-        canUpdateDeliverables={true}
-        history={ctx.history}
         joinedLater={ctx.joinedLater}
         canManage={access.canManage}
       />

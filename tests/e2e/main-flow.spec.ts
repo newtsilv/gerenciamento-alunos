@@ -115,9 +115,11 @@ test("fluxo completo do monitor/administrador", async ({ page }) => {
   await page.getByRole("radiogroup", { name: "Autonomia na resolução de problemas" }).getByRole("radio", { name: "N/O" }).click();
   await page.getByLabel("Quais dificuldades foram encontradas?").fill("Integração com a API de pagamentos.");
   await page.getByLabel("O que precisa ser feito até o próximo acompanhamento?").fill("Finalizar o protótipo.");
-  for (const c of ["Participação", "Comunicação", "Colaboração", "Evolução técnica", "Autonomia", "Cumprimento das atividades"]) {
-    await page.getByLabel(`Aplicar nota a todos em ${c}`).selectOption("4");
+  for (const c of ["Comprometimento", "Produtividade", "Proatividade", "Colaboração", "Evolução"]) {
+    await page.getByLabel(`Aplicar nota a todos em ${c}`).selectOption("8");
   }
+  await page.locator("[data-student-row]").first().click({ position: { x: 8, y: 8 } });
+  await page.getByLabel("O que entregou?").fill("Protótipo navegável.");
   await page.getByRole("combobox", { name: "Situação de acompanhamento" }).first().selectOption("precisa_atencao");
   await page.getByRole("button", { name: "Salvar rascunho" }).click();
   await expect(page.getByText("Rascunho salvo.")).toBeVisible();
@@ -126,6 +128,9 @@ test("fluxo completo do monitor/administrador", async ({ page }) => {
   await expect(page.getByText("Acompanhamento concluído.")).toBeVisible();
 
   await expect(page.getByText("5/5 alunos avaliados")).toBeVisible();
+  await page.reload();
+  await page.locator("[data-student-row]").first().click({ position: { x: 8, y: 8 } });
+  await expect(page.getByLabel("O que entregou?")).toHaveValue("Protótipo navegável.");
 
   // Planilha do dia direto na lista de dias
   await page.goto(challengeUrl);

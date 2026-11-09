@@ -1,5 +1,5 @@
 import type ExcelJS from "exceljs";
-import { DELIVERABLE_STATUS, FOLLOWUP_STATUS, PREVIOUS_DIFFICULTY_STATUS, type FollowupStatus } from "@/lib/domain/constants";
+import { FOLLOWUP_STATUS, PREVIOUS_DIFFICULTY_STATUS, type FollowupStatus } from "@/lib/domain/constants";
 import { average } from "@/lib/domain/scores";
 import { formatDate } from "@/lib/domain/dates";
 import { addNote, addTable, newSheet, newWorkbook, type Column, type Tone } from "./excel";
@@ -35,7 +35,7 @@ export function round1(v: number | null): number | string {
 }
 
 export function hasStudentContent(s: ReportStudentEval) {
-  return s.absent || !!s.followup_status || !!s.notes.trim() || !!s.difficulty.trim() || !!s.guidance.trim() || Object.keys(s.scores).length > 0;
+  return s.absent || !!s.followup_status || !!s.activities.trim() || !!s.deliveries.trim() || !!s.commitments.trim() || !!s.notes.trim() || !!s.difficulty.trim() || !!s.guidance.trim() || Object.keys(s.scores).length > 0;
 }
 
 /** Junta textos preenchidos em uma única célula, com rótulos curtos. */
@@ -69,7 +69,6 @@ export const PENDING_TONE: Record<string, Tone> = {
   "Acompanhamento incompleto": "warning",
   "Aluno sem avaliação": "muted",
   "Aluno sem avaliação na semana": "muted",
-  "Entrega pendente": "danger",
 };
 
 export function buildDailyWorkbook(data: ReportData, date: string): ExcelJS.Workbook {
@@ -148,7 +147,7 @@ export function buildDailyWorkbook(data: ReportData, date: string): ExcelJS.Work
       })),
       { emptyText: "Nenhum aluno com situação de atenção neste dia." },
     );
-    addNote(ws, att.next - 1, "Notas de 1 a 5 · N/O = não observado (fica fora da média) · “Não avaliado” não é nota zero.");
+    addNote(ws, att.next - 1, "Notas de 0 a 10 · N/O = não observado (fica fora da média) · “Não avaliado” não é nota zero.");
   }
 
   // ---------- Aba 2 — Equipes
@@ -162,7 +161,7 @@ export function buildDailyWorkbook(data: ReportData, date: string): ExcelJS.Work
       { header: "Média", key: "media", width: 10, kind: "number", bold: true },
       { header: "Alunos avaliados", key: "alunos", width: 12, kind: "center" },
       { header: "Dificuldades anteriores", key: "anteriores", width: 20, kind: "pill", tone: previousTone },
-      { header: "Avanços e entregas", key: "avancos", width: 40, kind: "wrap" },
+      { header: "Avanços", key: "avancos", width: 40, kind: "wrap" },
       { header: "Dificuldades", key: "dificuldades", width: 36, kind: "wrap" },
       { header: "Próximos passos", key: "proximos", width: 36, kind: "wrap" },
     ];
@@ -197,7 +196,7 @@ export function buildDailyWorkbook(data: ReportData, date: string): ExcelJS.Work
       ...studCrit.map((c): Column => ({ header: criterionLabel(c), key: `c_${c.id}`, width: 13, kind: "number" })),
       { header: "Média", key: "media", width: 10, kind: "number", bold: true },
       { header: "Situação", key: "situacao", width: 25, kind: "pill", tone: situationTone, options: SITUATION_OPTIONS },
-      { header: "Observações", key: "obs", width: 50, kind: "wrap" },
+      { header: "Respostas do aluno", key: "obs", width: 60, kind: "wrap" },
     ];
     const rows = studentRows.map((r) => {
       const base: Record<string, unknown> = { aluno: name(r.studentId), equipe: r.teamName, ra: data.students[r.studentId]?.registration ?? "" };
@@ -208,7 +207,7 @@ export function buildDailyWorkbook(data: ReportData, date: string): ExcelJS.Work
         presenca: r.ev.absent ? "Ausente" : "Presente",
         media: r.ev.absent ? "" : round1(average(studCrit.map((c) => r.ev!.scores[c.id]))),
         situacao: situationLabel(r.ev.followup_status),
-        obs: joinNotes([["Dificuldade", r.ev.difficulty], ["Orientação", r.ev.guidance], ["", r.ev.notes]]),
+        obs: joinNotes([["Fez", r.ev.activities], ["Entregou", r.ev.deliveries], ["Próxima semana", r.ev.commitments], ["Dificuldade", r.ev.difficulty], ["Orientação", r.ev.guidance], ["", r.ev.notes]]),
       };
     });
     addTable(ws, next, `Alunos · ${evaluated.length} de ${studentRows.length} avaliados`, cols, rows, { freeze: true, filter: true });
@@ -227,13 +226,6 @@ export function buildDailyWorkbook(data: ReportData, date: string): ExcelJS.Work
     const missing = new Map<string, string[]>();
     for (const r of studentRows.filter((x) => !x.ev && evaluatedTeams.has(x.teamName))) missing.set(r.teamName, [...(missing.get(r.teamName) ?? []), name(r.studentId)]);
     for (const [team, names] of missing) pend.push({ tipo: "Aluno sem avaliação", equipe: team, item: `${names.length} aluno(s)`, detalhe: names.join(", ") });
-    const teamName = new Map(data.teams.map((t) => [t.id, t.name]));
-    for (const d of data.deliverables) {
-      if (d.status === "concluida") continue;
-      const late = d.due_date && d.due_date <= date;
-      if (!late && d.status !== "bloqueada") continue;
-      pend.push({ tipo: "Entrega pendente", equipe: teamName.get(d.team_id) ?? "—", item: d.title, detalhe: DELIVERABLE_STATUS[d.status], prazo: d.due_date ?? "" });
-    }
     const { ws, next } = newSheet(wb, "Pendências", `Pendências — ${dayLabel}`, data.challenge.name);
     addTable(
       ws,
@@ -244,7 +236,6 @@ export function buildDailyWorkbook(data: ReportData, date: string): ExcelJS.Work
         { header: "Equipe", key: "equipe", width: 14 },
         { header: "Item", key: "item", width: 26 },
         { header: "Detalhe", key: "detalhe", width: 50, kind: "wrap" },
-        { header: "Prazo", key: "prazo", width: 13, kind: "date" },
       ],
       pend,
       { freeze: true, filter: true, emptyText: "Nenhuma pendência. Tudo em dia!" },

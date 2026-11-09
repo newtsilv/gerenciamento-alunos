@@ -33,7 +33,7 @@ function fixture(): ReportData {
             previous_difficulties_status: null,
             scores: { e1: 4 },
             students: [
-              { student_id: "s1", team_id: "t1", absent: false, followup_status: "precisa_atencao", notes: "", difficulty: "Git", guidance: "", scores: { a1: 2, a2: null } },
+              { student_id: "s1", team_id: "t1", absent: false, followup_status: "precisa_atencao", activities: "", deliveries: "", commitments: "", notes: "", difficulty: "Git", guidance: "", scores: { a1: 2, a2: null } },
             ],
           },
         ],
@@ -57,13 +57,12 @@ function fixture(): ReportData {
             previous_difficulties_status: null,
             scores: { e1: 5 },
             students: [
-              { student_id: "s1", team_id: "t4", absent: false, followup_status: "evoluindo_bem", notes: "", difficulty: "Git", guidance: "", scores: { a1: 4, a2: 4 } },
+              { student_id: "s1", team_id: "t4", absent: false, followup_status: "evoluindo_bem", activities: "", deliveries: "", commitments: "", notes: "", difficulty: "Git", guidance: "", scores: { a1: 4, a2: 4 } },
             ],
           },
         ],
       },
     ],
-    deliverables: [{ team_id: "t1", title: "Protótipo", status: "em_andamento", due_date: "2026-11-01", completed_at: null }],
   };
 }
 
@@ -94,10 +93,9 @@ describe("relatório diário", () => {
     expect(joao).toContain(2); // média = 2 (somente a1)
   });
 
-  it("lista equipe não avaliada e entrega vencida nas pendências", () => {
+  it("lista equipe não avaliada nas pendências", () => {
     const rows = rowsOf(wb.getWorksheet("Pendências")!);
     expect(rows.some((r) => r[0] === "Equipe não avaliada" && r[1] === "Equipe 04")).toBe(true);
-    expect(rows.some((r) => r[0] === "Entrega pendente" && r[2] === "Protótipo")).toBe(true);
   });
 });
 

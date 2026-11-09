@@ -10,7 +10,7 @@ export function DeleteChallengeButton({ challengeId, name }: { challengeId: stri
   return (
     <ConfirmDialog
       title={`Excluir "${name}"?`}
-      description="Todas as equipes, vínculos, avaliações e entregas deste desafio serão excluídos permanentemente, assim como os alunos que só participavam dele. Para preservar o histórico, prefira alterar o status para Arquivado."
+      description="Todas as equipes, vínculos e avaliações deste desafio serão excluídos permanentemente, assim como os alunos que só participavam dele. Para preservar o histórico, prefira alterar o status para Arquivado."
       confirmLabel="Excluir definitivamente"
       destructive
       onConfirm={async () => {

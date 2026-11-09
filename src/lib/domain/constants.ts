@@ -26,21 +26,6 @@ export const FOLLOWUP_TONE: Record<FollowupStatus, "success" | "warning" | "dang
   necessita_intervencao: "danger",
 };
 
-export const DELIVERABLE_STATUS = {
-  nao_iniciada: "Não iniciada",
-  em_andamento: "Em andamento",
-  concluida: "Concluída",
-  bloqueada: "Bloqueada",
-} as const;
-export type DeliverableStatus = keyof typeof DELIVERABLE_STATUS;
-
-export const DELIVERABLE_TONE: Record<DeliverableStatus, "neutral" | "info" | "success" | "danger"> = {
-  nao_iniciada: "neutral",
-  em_andamento: "info",
-  concluida: "success",
-  bloqueada: "danger",
-};
-
 export const PREVIOUS_DIFFICULTY_STATUS = {
   resolvidas: "Resolvidas",
   parcialmente: "Parcialmente resolvidas",
@@ -71,7 +56,7 @@ export function teamSessionState(status: EvaluationStatus | null | undefined): T
 export const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"] as const;
 export const WEEKDAYS_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"] as const;
 
-export const SCORE_VALUES = [1, 2, 3, 4, 5] as const;
+export const SCORE_VALUES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
 export const CHALLENGE_STATUS_TONE: Record<ChallengeStatus, "info" | "success" | "neutral"> = {
   planejado: "info",

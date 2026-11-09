@@ -261,14 +261,14 @@ isOneToOne: false
                   ]
                 },"student_evaluations": {
                   Row: {
-                    "absent": boolean,"created_at": string,"difficulty": string,"followup_status": Database["public"]['Enums']["followup_status"] | null,"guidance": string,"id": string,"membership_id": string | null,"notes": string,"student_id": string,"team_evaluation_id": string,"team_id": string,"updated_at": string
+                    "absent": boolean,"activities": string,"commitments": string,"created_at": string,"deliveries": string,"difficulty": string,"followup_status": Database["public"]['Enums']["followup_status"] | null,"guidance": string,"id": string,"membership_id": string | null,"notes": string,"student_id": string,"team_evaluation_id": string,"team_id": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "absent"?: boolean,"created_at"?: string,"difficulty"?: string,"followup_status"?: Database["public"]['Enums']["followup_status"] | null,"guidance"?: string,"id"?: string,"membership_id"?: string | null,"notes"?: string,"student_id": string,"team_evaluation_id": string,"team_id": string,"updated_at"?: string
+                    "absent"?: boolean,"activities"?: string,"commitments"?: string,"created_at"?: string,"deliveries"?: string,"difficulty"?: string,"followup_status"?: Database["public"]['Enums']["followup_status"] | null,"guidance"?: string,"id"?: string,"membership_id"?: string | null,"notes"?: string,"student_id": string,"team_evaluation_id": string,"team_id": string,"updated_at"?: string
                   }
                   Update: {
-                    "absent"?: boolean,"created_at"?: string,"difficulty"?: string,"followup_status"?: Database["public"]['Enums']["followup_status"] | null,"guidance"?: string,"id"?: string,"membership_id"?: string | null,"notes"?: string,"student_id"?: string,"team_evaluation_id"?: string,"team_id"?: string,"updated_at"?: string
+                    "absent"?: boolean,"activities"?: string,"commitments"?: string,"created_at"?: string,"deliveries"?: string,"difficulty"?: string,"followup_status"?: Database["public"]['Enums']["followup_status"] | null,"guidance"?: string,"id"?: string,"membership_id"?: string | null,"notes"?: string,"student_id"?: string,"team_evaluation_id"?: string,"team_id"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {

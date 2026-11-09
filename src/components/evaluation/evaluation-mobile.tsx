@@ -23,10 +23,10 @@ import {
   type StudentState,
 } from "./evaluation-state";
 import { ScoreSegment } from "./score-input";
-import { StudentNotes } from "./student-notes";
+import { StudentQuestions } from "./student-questions";
 
 type Step = "equipe" | "alunos" | "registro";
-const STEP_ORDER: Step[] = ["equipe", "alunos", "registro"];
+const STEP_ORDER: Step[] = ["equipe", "registro", "alunos"];
 
 /** Troca de passo: o conteúdo desliza no sentido em que a pessoa avançou. */
 const stepVariants: Variants = {
@@ -65,8 +65,6 @@ export function EvaluationMobile({
   restoreBanner,
   joinedNotice,
   previousBody,
-  deliverables,
-  history,
   concludeButton,
 }: {
   challengeId: string;
@@ -90,8 +88,6 @@ export function EvaluationMobile({
   restoreBanner: ReactNode;
   joinedNotice: ReactNode;
   previousBody: ReactNode;
-  deliverables: ReactNode;
-  history: ReactNode;
   concludeButton: ReactNode;
 }) {
   const studentOf = (id: string) => state.students[id] ?? emptyStudent();
@@ -101,7 +97,6 @@ export function EvaluationMobile({
   const [openId, setOpenId] = useState<string | null>(
     () => (students.find((st) => !studentHasContent(state.students[st.id] ?? emptyStudent())) ?? students[0])?.id ?? null,
   );
-  const [notesOpen, setNotesOpen] = useState<Record<string, boolean>>({});
   const [showPrev, setShowPrev] = useState(false);
 
   // inputs não travam durante o salvamento: travar um campo em foco fecharia o teclado do celular
@@ -129,25 +124,23 @@ export function EvaluationMobile({
   const nextStudent = openIndex >= 0 ? students[openIndex + 1] : undefined;
   const steps: { key: Step; label: string; progress?: [number, number] }[] = [
     { key: "equipe", label: "Equipe", progress: [teamFilled, teamCriteria.length] },
-    { key: "alunos", label: "Alunos", progress: [evaluated, students.length] },
     { key: "registro", label: "Registro" },
+    { key: "alunos", label: "Alunos", progress: [evaluated, students.length] },
   ];
 
   const primary =
     step === "equipe" ? (
+      <PrimaryButton label="Ir para o registro" onClick={() => goStep("registro")} />
+    ) : step === "registro" ? (
       <PrimaryButton label="Avaliar alunos" onClick={() => goStep("alunos")} />
-    ) : step === "alunos" ? (
-      nextStudent ? (
-        <PrimaryButton
-          label="Próximo aluno"
-          onClick={() => {
-            autoSave();
-            openStudent(nextStudent.id);
-          }}
-        />
-      ) : (
-        <PrimaryButton label="Ir para o registro" onClick={() => goStep("registro")} />
-      )
+    ) : nextStudent ? (
+      <PrimaryButton
+        label="Próximo aluno"
+        onClick={() => {
+          autoSave();
+          openStudent(nextStudent.id);
+        }}
+      />
     ) : canEdit ? (
       concludeButton
     ) : null;
@@ -279,8 +272,6 @@ export function EvaluationMobile({
                 const avg = average(studentCriteria.map((c) => toScore(s.scores, c.id)));
                 const filled = studentCriteria.filter((c) => c.id in s.scores).length;
                 const prev = previous?.students[st.id];
-                const hasNotes = !!(s.notes.trim() || s.difficulty.trim() || s.guidance.trim());
-                const showNotes = notesOpen[st.id];
                 return (
                   <li key={st.id} id={`aluno-${st.id}`} className="scroll-mt-28 rounded-2xl border bg-card">
                     <button
@@ -327,16 +318,23 @@ export function EvaluationMobile({
 
                         <Collapse open={!s.absent}>
                           <div className="flex flex-col gap-4">
+                            <StudentQuestions s={s} disabled={disabled} prevDifficulty={prev?.difficulty} onChange={(p) => patchStudent(st.id, p)} />
                             {studentCriteria.map((c) => (
                               <div key={c.id}>
-                                <p className="mb-2 text-sm font-medium">{c.name}</p>
-                                <ScoreSegment
-                                  fluid
-                                  label={`${c.name} — ${st.full_name}`}
-                                  value={toScore(s.scores, c.id)}
-                                  disabled={disabled}
-                                  onChange={(v) => patchStudent(st.id, { scores: setScore(s.scores, c.id, v) })}
-                                />
+                                <p className="text-sm font-medium">
+                                  {c.name}
+                                  {!c.is_active && <span className="ml-2 text-xs font-normal text-muted-foreground">(desativada)</span>}
+                                </p>
+                                {c.description && <p className="text-xs text-muted-foreground">{c.description}</p>}
+                                <div className="mt-2">
+                                  <ScoreSegment
+                                    fluid
+                                    label={`${c.name} — ${st.full_name}`}
+                                    value={toScore(s.scores, c.id)}
+                                    disabled={disabled}
+                                    onChange={(v) => patchStudent(st.id, { scores: setScore(s.scores, c.id, v) })}
+                                  />
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -366,27 +364,6 @@ export function EvaluationMobile({
                           </div>
                         </div>
 
-                        <div>
-                          <button
-                            type="button"
-                            aria-expanded={!!showNotes}
-                            onClick={() => setNotesOpen((n) => ({ ...n, [st.id]: !showNotes }))}
-                            className="flex h-9 items-center gap-1 text-sm font-medium text-brand"
-                          >
-                            {showNotes ? "Ocultar observações" : hasNotes ? "Ver observações" : "Adicionar observação"}
-                            <ChevronDownIcon className={cn("size-4 transition-transform", showNotes && "rotate-180")} />
-                          </button>
-                          <Collapse open={!!showNotes}>
-                            <div className="mt-2">
-                              <StudentNotes
-                                s={s}
-                                disabled={disabled}
-                                prevDifficulty={prev?.difficulty}
-                                onChange={(p) => patchStudent(st.id, p)}
-                              />
-                            </div>
-                          </Collapse>
-                        </div>
                       </div>
                     </Collapse>
                   </li>
@@ -412,8 +389,6 @@ export function EvaluationMobile({
               </label>
             ))}
           </div>
-          {deliverables && <Collapsible title="Entregas da equipe">{deliverables}</Collapsible>}
-          {history && <Collapsible title="Histórico de alterações">{history}</Collapsible>}
         </>
       )}
       </m.div>
@@ -442,24 +417,4 @@ function StudentSummary({ s, filled, total }: { s: StudentState; filled: number;
     return <span className={cn("block text-xs", toneText[FOLLOWUP_TONE[s.followup_status]])}>{FOLLOWUP_STATUS[s.followup_status]}</span>;
   }
   return <span className="block text-xs text-muted-foreground">{filled === 0 ? "Não avaliado" : `${filled} de ${total} notas`}</span>;
-}
-
-function Collapsible({ title, children }: { title: string; children: ReactNode }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <section className="rounded-2xl border bg-card">
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className="flex h-12 w-full items-center justify-between px-4 text-sm font-medium"
-      >
-        {title}
-        <ChevronDownIcon className={cn("size-4 text-muted-foreground transition-transform", open && "rotate-180")} />
-      </button>
-      <Collapse open={open}>
-        <div className="border-t p-4">{children}</div>
-      </Collapse>
-    </section>
-  );
 }

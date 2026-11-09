@@ -59,7 +59,7 @@ export default async function ChallengeSettingsPage({ params }: PageProps<"/desa
         <Card>
           <CardHeader>
             <CardTitle>Critérios de avaliação</CardTitle>
-            <CardDescription>Notas de 1 a 5 usadas na avaliação das equipes e dos alunos.</CardDescription>
+            <CardDescription>Notas de 0 a 10 usadas na avaliação das equipes e dos alunos.</CardDescription>
           </CardHeader>
           <CardContent>
             <Button variant="outline" render={<Link href={`/desafios/${id}/criterios`} />}>

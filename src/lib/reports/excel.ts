@@ -148,7 +148,7 @@ export function addTable(
         if (typeof v === "number") {
           cell.numFmt = c.kind === "delta" ? '"▲ "0.0;"▼ "0.0;"= "0.0' : Number.isInteger(v) ? "0" : "0.0";
           const color =
-            c.kind === "delta" ? (v > 0 ? TONES.success.font : v < 0 ? TONES.danger.font : COLORS.muted) : v >= 4 ? TONES.success.font : v <= 2 ? TONES.danger.font : COLORS.text;
+            c.kind === "delta" ? (v > 0 ? TONES.success.font : v < 0 ? TONES.danger.font : COLORS.muted) : v >= 8 ? TONES.success.font : v < 5 ? TONES.danger.font : COLORS.text;
           cell.font = { bold: c.bold || c.kind === "delta", color: { argb: color } };
         } else if (v) {
           cell.font = { italic: true, color: { argb: COLORS.muted } };

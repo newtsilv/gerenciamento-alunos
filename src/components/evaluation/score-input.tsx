@@ -3,15 +3,27 @@
 import { cn } from "@/lib/utils";
 import { SCORE_VALUES } from "@/lib/domain/constants";
 
-/** undefined = não preenchido · null = Não observado · 1..5 = nota */
+/** undefined = não preenchido · null = Não observado · 0..10 = nota */
 export type Score = number | null | undefined;
 
-const scoreColors: Record<number, string> = {
-  1: "border-danger bg-danger text-white",
-  2: "border-warning bg-warning text-white",
-  3: "border-brand/70 bg-brand/70 text-white",
-  4: "border-brand bg-brand text-white",
-  5: "border-success bg-success text-white",
+type ScoreTone = "danger" | "warning" | "brand" | "success";
+
+function scoreTone(n: number): ScoreTone {
+  return n < 5 ? "danger" : n < 7 ? "warning" : n < 9 ? "brand" : "success";
+}
+
+const toneSelected: Record<ScoreTone, string> = {
+  danger: "border-danger bg-danger text-white",
+  warning: "border-warning bg-warning text-white",
+  brand: "border-brand bg-brand text-white",
+  success: "border-success bg-success text-white",
+};
+
+const toneSoft: Record<ScoreTone, string> = {
+  danger: "border-danger/40 bg-danger-soft text-danger",
+  warning: "border-warning/40 bg-warning-soft text-warning",
+  brand: "border-brand/30 bg-brand-soft text-brand",
+  success: "border-success/30 bg-success-soft text-success",
 };
 
 export function ScoreSegment({
@@ -42,8 +54,8 @@ export function ScoreSegment({
             onClick={() => onChange(selected ? undefined : n)}
             className={cn(
               "rounded-lg border text-sm font-medium tabular-nums transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-60",
-              fluid ? "h-11 w-full" : "size-9",
-              selected ? scoreColors[n] : "bg-card hover:border-brand/40 hover:bg-brand-soft",
+              fluid ? "h-11 w-full" : "size-8",
+              selected ? toneSelected[scoreTone(n)] : "bg-card hover:border-brand/40 hover:bg-brand-soft",
             )}
           >
             {n}
@@ -59,7 +71,7 @@ export function ScoreSegment({
         onClick={() => onChange(value === null ? undefined : null)}
         className={cn(
           "rounded-lg border text-xs font-medium transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-60",
-          fluid ? "h-11 w-full" : "h-9 px-2.5",
+          fluid ? "h-11 w-full" : "h-8 px-2",
           value === null ? "border-foreground/60 bg-foreground/80 text-background" : "bg-card text-muted-foreground hover:bg-surface",
         )}
       >
@@ -96,9 +108,7 @@ export function ScoreSelect({
       className={cn(
         "h-9 w-full min-w-14 appearance-none rounded-lg border bg-card px-2 text-center text-sm font-medium tabular-nums outline-none transition-colors",
         "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 disabled:opacity-60",
-        typeof value === "number" && value <= 2 && "border-danger/40 bg-danger-soft text-danger",
-        typeof value === "number" && value === 3 && "border-brand/30 bg-brand-soft text-brand",
-        typeof value === "number" && value >= 4 && "border-success/30 bg-success-soft text-success",
+        typeof value === "number" && toneSoft[scoreTone(value)],
         value === null && "text-muted-foreground",
         className,
       )}

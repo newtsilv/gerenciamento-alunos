@@ -150,7 +150,7 @@ function NewUserDialog() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Novo usuário</DialogTitle>
-          <DialogDescription>O acesso é feito com RA e senha. Os papéis (coordenador, professor, monitor) são definidos em cada desafio.</DialogDescription>
+          <DialogDescription>O acesso é feito com nome ou RA e senha. Os papéis (coordenador, professor, monitor) são definidos em cada desafio.</DialogDescription>
         </DialogHeader>
         <form
           className="flex flex-col gap-4"
@@ -168,7 +168,7 @@ function NewUserDialog() {
             <Input {...form.register("full_name")} />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="RA" required error={e.login?.message}>
+            <Field label="RA (opcional)" error={e.login?.message}>
               <Input autoCapitalize="none" {...form.register("login")} />
             </Field>
             <Field label="Senha inicial" required error={e.password?.message}>
@@ -231,7 +231,7 @@ function EditUserDialog({ user, onClose }: { user: UserRow; onClose: () => void 
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Editar nome e RA</DialogTitle>
-          <DialogDescription>A senha continua a mesma. Depois de salvar, a pessoa entra com o novo RA.</DialogDescription>
+          <DialogDescription>A senha continua a mesma. Sem RA, a pessoa entra pelo nome completo.</DialogDescription>
         </DialogHeader>
         <form
           className="flex flex-col gap-4"
@@ -245,7 +245,7 @@ function EditUserDialog({ user, onClose }: { user: UserRow; onClose: () => void 
           <Field label="Nome completo" required error={e.full_name?.message}>
             <Input {...form.register("full_name")} />
           </Field>
-          <Field label="RA" required error={e.login?.message}>
+          <Field label="RA (opcional)" error={e.login?.message}>
             <Input autoCapitalize="none" {...form.register("login")} />
           </Field>
           <Button type="submit" disabled={pending}>

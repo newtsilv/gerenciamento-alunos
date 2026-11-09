@@ -7,7 +7,7 @@
 export type ScoreValue = number | null | undefined;
 
 export function average(values: ScoreValue[]): number | null {
-  const valid = values.filter((v): v is number => typeof v === "number" && v >= 1 && v <= 5);
+  const valid = values.filter((v): v is number => typeof v === "number" && v >= 0 && v <= 10);
   if (valid.length === 0) return null;
   return valid.reduce((a, b) => a + b, 0) / valid.length;
 }
@@ -37,5 +37,5 @@ export function formatDelta(value: number | null): string {
 
 /** Média baixa serve apenas como alerta visual — a situação é sempre definida por uma pessoa. */
 export function isLowAverage(value: number | null): boolean {
-  return value !== null && value < 2.5;
+  return value !== null && value < 5;
 }

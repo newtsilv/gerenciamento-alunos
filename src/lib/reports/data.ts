@@ -1,6 +1,6 @@
 import "server-only";
 import type { ServerSupabase } from "@/lib/supabase/server";
-import type { DeliverableStatus, FollowupStatus, PreviousDifficultyStatus } from "@/lib/domain/constants";
+import type { FollowupStatus, PreviousDifficultyStatus } from "@/lib/domain/constants";
 
 export type ReportCriterion = { id: string; scope: "equipe" | "aluno"; name: string; position: number; version: number; is_active: boolean };
 
@@ -9,6 +9,9 @@ export type ReportStudentEval = {
   team_id: string;
   absent: boolean;
   followup_status: FollowupStatus | null;
+  activities: string;
+  deliveries: string;
+  commitments: string;
   notes: string;
   difficulty: string;
   guidance: string;
@@ -44,7 +47,6 @@ export type ReportData = {
   students: Record<string, { name: string; registration: string | null }>;
   criteria: ReportCriterion[];
   sessions: ReportSession[];
-  deliverables: { team_id: string; title: string; status: DeliverableStatus; due_date: string | null; completed_at: string | null }[];
 };
 
 /** Carrega todos os dados do período usando o cliente do usuário (RLS aplicado). */
@@ -57,7 +59,7 @@ export async function loadReportData(
   const { data: challenge } = await supabase.from("challenges").select("id, name, company").eq("id", challengeId).maybeSingle();
   if (!challenge) return null;
 
-  const [teamsRes, sessionsRes, criteriaRes, membershipsRes, deliverablesRes] = await Promise.all([
+  const [teamsRes, sessionsRes, criteriaRes, membershipsRes] = await Promise.all([
     supabase
       .from("teams")
       .select("id, name, active, monitor:profiles!teams_assigned_monitor_id_fkey(full_name)")
@@ -77,7 +79,6 @@ export async function loadReportData(
       .eq("challenge_id", challengeId)
       .lte("start_date", to)
       .or(`end_date.is.null,end_date.gt.${from}`),
-    supabase.from("team_deliverables").select("team_id, title, status, due_date, completed_at, team:teams!inner(challenge_id)").eq("team.challenge_id", challengeId),
   ]);
 
   const sessionRows = sessionsRes.data ?? [];
@@ -85,7 +86,7 @@ export async function loadReportData(
     ? await supabase
         .from("team_evaluations")
         .select(
-          "id, session_id, team_id, status, developed, difficulties, deliveries_completed, next_steps, general_notes, previous_difficulties_status, monitor:profiles!team_evaluations_monitor_id_fkey(full_name), evaluation_scores(criterion_id, score), student_evaluations(student_id, team_id, absent, followup_status, notes, difficulty, guidance, evaluation_scores(criterion_id, score), student:students(id, full_name, registration))",
+          "id, session_id, team_id, status, developed, difficulties, deliveries_completed, next_steps, general_notes, previous_difficulties_status, monitor:profiles!team_evaluations_monitor_id_fkey(full_name), evaluation_scores(criterion_id, score), student_evaluations(student_id, team_id, absent, followup_status, activities, deliveries, commitments, notes, difficulty, guidance, evaluation_scores(criterion_id, score), student:students(id, full_name, registration))",
         )
         .in("session_id", sessionRows.map((s) => s.id))
     : { data: [] };
@@ -131,6 +132,9 @@ export async function loadReportData(
             team_id: se.team_id,
             absent: se.absent,
             followup_status: se.followup_status,
+            activities: se.activities,
+            deliveries: se.deliveries,
+            commitments: se.commitments,
             notes: se.notes,
             difficulty: se.difficulty,
             guidance: se.guidance,
@@ -146,12 +150,5 @@ export async function loadReportData(
     students,
     criteria: criteriaRes.data ?? [],
     sessions,
-    deliverables: (deliverablesRes.data ?? []).map((d) => ({
-      team_id: d.team_id,
-      title: d.title,
-      status: d.status,
-      due_date: d.due_date,
-      completed_at: d.completed_at,
-    })),
   };
 }

@@ -1,5 +1,5 @@
 import type ExcelJS from "exceljs";
-import { DELIVERABLE_STATUS, type FollowupStatus } from "@/lib/domain/constants";
+import type { FollowupStatus } from "@/lib/domain/constants";
 import { average, delta } from "@/lib/domain/scores";
 import { formatDate, todayISO } from "@/lib/domain/dates";
 import { addNote, addTable, newSheet, newWorkbook, type Column, type Tone } from "./excel";
@@ -62,9 +62,6 @@ export function buildWeeklyWorkbook(data: ReportData, range: { start: string; en
   }
   const attention = [...lastStatus.entries()].filter(([, s]) => s === "precisa_atencao" || s === "necessita_intervencao");
 
-  const completedThisWeek = data.deliverables.filter((d) => d.status === "concluida" && d.completed_at && d.completed_at >= range.start && d.completed_at <= range.end);
-  const overdue = data.deliverables.filter((d) => d.status !== "concluida" && d.due_date && d.due_date <= range.end);
-
   // ----- Aba 1 — Resumo
   {
     const { ws, next } = newSheet(wb, "Resumo", `Relatório semanal — ${data.challenge.name}`, subtitle);
@@ -100,7 +97,6 @@ export function buildWeeklyWorkbook(data: ReportData, range: { start: string; en
     const recurrent = teams.filter((t) => sessions.filter((_, i) => evalOf(i, t.id)?.difficulties.trim()).length > 1 || sessions.some((_, i) => evalOf(i, t.id)?.previous_difficulties_status === "nao_resolvidas"));
     if (recurrent.length) highlights.push(`${recurrent.length} equipe(s) com dificuldades recorrentes ou não resolvidas: ${recurrent.map((t) => t.name).join(", ")}.`);
     if (attention.length) highlights.push(`${attention.length} aluno(s) precisam de atenção ou intervenção (última avaliação da semana).`);
-    highlights.push(`${completedThisWeek.length} entrega(s) concluída(s) na semana · ${overdue.length} com prazo vencido.`);
     const hl = addTable(ws, days.next, "Destaques", [{ header: "O que observar", key: "t", width: 34, kind: "wrap" }], highlights.map((t) => ({ t })));
     // destaques ocupam a largura toda da tabela de cima
     for (let r = hl.headerRowNumber; r < hl.next - 2; r++) ws.mergeCells(r, 1, r, 5);
@@ -130,23 +126,19 @@ export function buildWeeklyWorkbook(data: ReportData, range: { start: string; en
       ...sessions.map((s, i): Column => ({ header: `Média ${dateLabel(s.date)}`, key: `m${i}`, width: 15, kind: "number" })),
       { header: "Variação", key: "delta", width: 15, kind: "delta" },
       { header: "Dificuldade recorrente", key: "rec", width: 16, kind: "pill", tone: yesNoTone, options: ["Sim", "Não"] },
-      { header: "Entregas na semana", key: "entregas", width: 13, kind: "center" },
-      { header: "Atrasadas", key: "atrasadas", width: 12, kind: "center" },
       { header: "Dificuldades da semana", key: "dif", width: 46, kind: "wrap" },
     ];
     const rows = teams.map((t) => {
       const row: Record<string, unknown> = { equipe: t.name, monitor: t.monitorName };
       sessions.forEach((_, i) => {
         const e = evalOf(i, t.id);
-        row[`m${i}`] = e ? round1(teamAvg(e)) || "N/O" : NOT_EVALUATED;
+        row[`m${i}`] = !e ? NOT_EVALUATED : teamAvg(e) === null ? "N/O" : round1(teamAvg(e));
       });
       row.delta = sessions.length >= 2 ? deltaCell(delta(teamAvg(evalOf(0, t.id)), teamAvg(evalOf(lastIdx, t.id)))) : "";
       const texts = sessions.map((s, i) => [dateLabel(s.date), evalOf(i, t.id)?.difficulties.trim() ?? ""] as const).filter(([, x]) => x);
       const unresolved = sessions.some((_, i) => evalOf(i, t.id)?.previous_difficulties_status === "nao_resolvidas");
       row.rec = texts.length > 1 || unresolved ? "Sim" : texts.length ? "Não" : "";
       row.dif = texts.map(([d, x]) => `${d}: ${x}`).join("\n");
-      row.entregas = completedThisWeek.filter((d) => d.team_id === t.id).length;
-      row.atrasadas = overdue.filter((d) => d.team_id === t.id).length;
       return row;
     });
     addTable(ws, next, `Evolução das equipes · ${sessions.length} acompanhamento(s)`, cols, rows, { freeze: true, filter: true });
@@ -167,7 +159,7 @@ export function buildWeeklyWorkbook(data: ReportData, range: { start: string; en
       { header: "Variação", key: "delta", width: 15, kind: "delta" },
       { header: "Situação atual", key: "situacao", width: 25, kind: "pill", tone: situationTone, options: SITUATION_OPTIONS },
       { header: "Dificuldade recorrente", key: "rec", width: 16, kind: "pill", tone: yesNoTone, options: ["Sim", "Não"] },
-      { header: "Última orientação", key: "orientacao", width: 44, kind: "wrap" },
+      { header: "Último compromisso", key: "orientacao", width: 44, kind: "wrap" },
     ];
     const rows = sidList.map((sid) => {
       const teamsOfWeek = [...new Set(sessions.map((_, i) => studentTeamOn(i, sid)).filter(Boolean))].map((id) => teamName.get(id!) ?? "");
@@ -182,7 +174,7 @@ export function buildWeeklyWorkbook(data: ReportData, range: { start: string; en
         if (ev.difficulty.trim()) difficulties++;
         const a = ev.absent ? null : average(studCrit.map((c) => ev.scores[c.id]));
         row[`m${i}`] = ev.absent ? "Ausente" : a === null ? "N/O" : round1(a);
-        if (ev.guidance) row.orientacao = ev.guidance;
+        if (ev.commitments || ev.guidance) row.orientacao = ev.commitments || ev.guidance;
         return a;
       });
       row.delta = sessions.length >= 2 ? deltaCell(delta(avgs[0], avgs[avgs.length - 1])) : "";
@@ -214,9 +206,6 @@ export function buildWeeklyWorkbook(data: ReportData, range: { start: string; en
       missing.set(team, [...(missing.get(team) ?? []), name(sid)]);
     }
     for (const [team, names] of missing) pend.push({ tipo: "Aluno sem avaliação na semana", equipe: team, item: `${names.length} aluno(s)`, detalhe: names.join(", ") });
-    for (const d of overdue) {
-      pend.push({ tipo: "Entrega pendente", equipe: teamName.get(d.team_id) ?? "—", item: d.title, detalhe: `${DELIVERABLE_STATUS[d.status]} · prazo ${formatDate(d.due_date!)}` });
-    }
     const { ws, next } = newSheet(wb, "Pendências", `Pendências — ${weekLabel}`, data.challenge.name);
     addTable(
       ws,

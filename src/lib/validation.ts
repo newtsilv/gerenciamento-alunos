@@ -44,25 +44,9 @@ export const transferSchema = z.object({
 });
 export type TransferInput = z.infer<typeof transferSchema>;
 
-export const milestoneSchema = z.object({
-  title: trimmed(150).min(1, "Informe o título"),
-  description: trimmed(2000),
-  due_date: z.union([isoDate, z.literal("")]).transform((v) => v || null),
-});
-export type MilestoneInput = z.input<typeof milestoneSchema>;
-
-export const deliverableSchema = z.object({
-  title: trimmed(150).min(1, "Informe o título"),
-  description: trimmed(2000),
-  due_date: z.union([isoDate, z.literal("")]).transform((v) => v || null),
-  status: z.enum(["nao_iniciada", "em_andamento", "concluida", "bloqueada"]),
-  notes: trimmed(2000),
-});
-export type DeliverableInput = z.input<typeof deliverableSchema>;
-
 export const userSchema = z.object({
   full_name: trimmed(150).min(1, "Informe o nome"),
-  login: trimmed(60).min(1, "Informe o RA").regex(/^[A-Za-z0-9._-]+$/, "Use apenas letras, números, ponto, hífen ou sublinhado"),
+  login: trimmed(60).regex(/^[A-Za-z0-9._-]*$/, "Use apenas letras, números, ponto, hífen ou sublinhado"),
   email: z.union([z.email("E-mail inválido"), z.literal("")]),
   password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
   is_admin: z.boolean(),
@@ -71,7 +55,7 @@ export type UserInput = z.infer<typeof userSchema>;
 export const userIdentitySchema = userSchema.pick({ full_name: true, login: true });
 export type UserIdentityInput = z.infer<typeof userIdentitySchema>;
 
-const score = z.number().int().min(1).max(5).nullable(); // null = "Não observado"
+const score = z.number().int().min(0).max(10).nullable(); // null = "Não observado"
 
 export const evaluationSchema = z.object({
   session_id: uuid,
@@ -90,6 +74,9 @@ export const evaluationSchema = z.object({
       student_id: uuid,
       absent: z.boolean(),
       followup_status: z.enum(["evoluindo_bem", "precisa_atencao", "necessita_intervencao"]).nullable(),
+      activities: trimmed(3000),
+      deliveries: trimmed(3000),
+      commitments: trimmed(3000),
       notes: trimmed(3000),
       difficulty: trimmed(3000),
       guidance: trimmed(3000),

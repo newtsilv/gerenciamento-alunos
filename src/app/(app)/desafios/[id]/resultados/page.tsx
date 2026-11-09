@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/shared/stat-card";
 import { DashboardFilters } from "@/components/dashboard/filters";
 import { AttentionList, Panel, SituationBar } from "@/components/dashboard/widgets";
-import { DeliverablesChart, EvolutionChart } from "@/components/dashboard/charts";
+import { EvolutionChart } from "@/components/dashboard/charts";
 import { requireChallengeAccess } from "@/lib/auth";
 import { getChallenge, listTeams, membersByRole } from "@/lib/data/challenges";
 import { loadDashboard } from "@/lib/data/dashboard";
@@ -71,14 +71,9 @@ export default async function ChallengeOverview({ params, searchParams }: PagePr
           <SituationBar data={data} />
         </Panel>
       </div>
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <Panel title="Equipes com dificuldades">
-          <AttentionList data={data} />
-        </Panel>
-        <Panel title="Progresso das entregas" description={data.overdue ? `${data.overdue} entrega(s) com prazo vencido.` : undefined}>
-          <DeliverablesChart data={data.deliverableProgress} />
-        </Panel>
-      </div>
+      <Panel title="Equipes com dificuldades">
+        <AttentionList data={data} />
+      </Panel>
     </Stagger>
   );
 }

@@ -12,7 +12,7 @@ import { PageContainer, PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { DashboardFilters } from "@/components/dashboard/filters";
 import { AttentionList, Panel, SituationBar } from "@/components/dashboard/widgets";
-import { DeliverablesChart, EvolutionChart } from "@/components/dashboard/charts";
+import { EvolutionChart } from "@/components/dashboard/charts";
 import { requireViewer } from "@/lib/auth";
 import { loadDashboard } from "@/lib/data/dashboard";
 import { isISODate } from "@/lib/domain/dates";
@@ -68,12 +68,9 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
         </Panel>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
+      <div className="mt-6">
         <Panel title="Equipes que precisam de atenção" description="Com base no último acompanhamento de cada equipe.">
           <AttentionList data={data} showChallenge={!challengeId} />
-        </Panel>
-        <Panel title="Progresso das entregas" description={data.overdue ? `${data.overdue} entrega(s) com prazo vencido.` : "Status das entregas por equipe."}>
-          <DeliverablesChart data={data.deliverableProgress} />
         </Panel>
       </div>
       </Stagger>

@@ -11,13 +11,15 @@ export function ChallengeTabs({ challengeId, canManage }: { challengeId: string;
   const tabs = [
     { label: "Acompanhar", href: base, match: [base, `${base}/acompanhamentos`], exactFirst: true },
     { label: "Equipes", href: `${base}/equipes`, match: [`${base}/equipes`] },
-    { label: "Entregas", href: `${base}/entregas`, match: [`${base}/entregas`] },
     { label: "Resultados", href: `${base}/resultados`, match: [`${base}/resultados`, `${base}/historico`] },
   ];
 
   const isActive = (t: (typeof tabs)[number]) =>
     t.match.some((m, i) => (i === 0 && t.exactFirst ? pathname === m : pathname === m || pathname.startsWith(`${m}/`)));
   const settingsActive = pathname.startsWith(`${base}/configuracoes`) || pathname.startsWith(`${base}/criterios`);
+
+  // depois de escolher o dia, as outras seções só distraem; o "Voltar" do cabeçalho continua disponível
+  if (pathname.startsWith(`${base}/acompanhamentos/`)) return null;
 
   return (
     <nav className="scrollbar-thin relative -mx-4 mb-4 flex sm:mb-6 items-center overflow-x-auto border-b px-2 sm:mx-0 sm:px-0" aria-label="Seções do desafio">

@@ -1,7 +1,7 @@
 "use client";
 
 import { Collapse, Reveal } from "@/components/shared/motion";
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2Icon,
@@ -10,7 +10,6 @@ import {
   HistoryIcon,
   Loader2Icon,
   LockIcon,
-  MessageSquareTextIcon,
   SaveIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -21,16 +20,12 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { cn } from "@/lib/utils";
 import { saveEvaluation } from "@/lib/actions/evaluations";
-import { setDeliverableStatus } from "@/lib/actions/deliverables";
 import { backdateTeamMembers } from "@/lib/actions/teams";
 import {
-  DELIVERABLE_STATUS,
-  DELIVERABLE_TONE,
   FOLLOWUP_STATUS,
   FOLLOWUP_TONE,
   PREVIOUS_DIFFICULTY_STATUS,
   SCORE_VALUES,
-  type DeliverableStatus,
   type FollowupStatus,
   type PreviousDifficultyStatus,
 } from "@/lib/domain/constants";
@@ -39,7 +34,7 @@ import { average, formatAverage, isLowAverage } from "@/lib/domain/scores";
 import type { EvaluationInput } from "@/lib/validation";
 import { ScoreSegment, ScoreSelect, type Score } from "./score-input";
 import { EvaluationMobile } from "./evaluation-mobile";
-import { StudentNotes } from "./student-notes";
+import { StudentQuestions } from "./student-questions";
 import {
   emptyStudent,
   setScore,
@@ -67,9 +62,6 @@ export type EvaluationFormProps = {
   canEdit: boolean;
   lockedReason?: string;
   previous: PreviousEvaluation | null;
-  deliverables: { id: string; title: string; due_date: string | null; status: DeliverableStatus }[];
-  canUpdateDeliverables: boolean;
-  history: { changed_at: string; action: string; name: string | null }[];
   /** integrantes que entraram na equipe depois deste dia */
   joinedLater: { count: number; firstDate: string } | null;
   canManage: boolean;
@@ -88,7 +80,8 @@ export function EvaluationForm(props: EvaluationFormProps) {
     previous,
   } = props;
   const router = useRouter();
-  const storageKey = `eval:${sessionId}:${team.id}`;
+  // v2: backups da escala de 1 a 5 não podem ser restaurados na de 0 a 10
+  const storageKey = `eval:v2:${sessionId}:${team.id}`;
 
   const [state, setState] = useState<FormState>(() => {
     const s = { ...props.initial, students: { ...props.initial.students } };
@@ -98,16 +91,39 @@ export function EvaluationForm(props: EvaluationFormProps) {
   const [status, setStatus] = useState(props.status);
   const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(state));
   const [lastSaved, setLastSaved] = useState<string | null>(props.updatedAt);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [activeStudent, setActiveStudent] = useState<string | null>(null);
+  const activeAnchor = useRef<{ el: HTMLElement; top: number } | null>(null);
   const [showPrev, setShowPrev] = useState(true);
   const [restore, setRestore] = useState<FormState | null>(null);
   const [saving, startSaving] = useTransition();
-  const [, startDeliverable] = useTransition();
   const [fixing, startFixing] = useTransition();
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const snapshot = useMemo(() => JSON.stringify(state), [state]);
   const dirty = snapshot !== savedSnapshot;
+
+  // ---- perguntas abertas: só as do aluno em que a pessoa está
+  const activateStudent = (id: string, el: HTMLElement) => {
+    if (id === activeStudent) return;
+    activeAnchor.current = { el, top: el.getBoundingClientRect().top };
+    setActiveStudent(id);
+  };
+
+  // o aluno anterior fecha acima do tocado: compensa para a linha não pular sob o cursor
+  useLayoutEffect(() => {
+    const anchor = activeAnchor.current;
+    if (!anchor) return;
+    activeAnchor.current = null;
+    window.scrollBy({ top: anchor.el.getBoundingClientRect().top - anchor.top, behavior: "instant" });
+  }, [activeStudent]);
+
+  useEffect(() => {
+    const closeOnOutside = (e: MouseEvent) => {
+      if (!(e.target as Element).closest("[data-student-row]")) setActiveStudent(null);
+    };
+    document.addEventListener("click", closeOnOutside);
+    return () => document.removeEventListener("click", closeOnOutside);
+  }, []);
 
   // ---- backup local (protege contra perda de conexão / fechamento acidental)
   useEffect(() => {
@@ -162,8 +178,11 @@ export function EvaluationForm(props: EvaluationFormProps) {
         student_id,
         absent: s.absent,
         followup_status: s.followup_status,
-        notes: s.notes,
+        activities: s.activities,
+        deliveries: s.deliveries,
+        commitments: s.commitments,
         difficulty: s.difficulty,
+        notes: s.notes,
         guidance: s.guidance,
         scores: s.absent ? [] : Object.entries(s.scores).map(([criterion_id, score]) => ({ criterion_id, score })),
       })),
@@ -222,14 +241,6 @@ export function EvaluationForm(props: EvaluationFormProps) {
         next[st.id] = { ...cur, scores: setScore(cur.scores, criterionId, v) };
       }
       return { ...s, students: next };
-    });
-
-  const fillRow = (studentId: string, v: Score) =>
-    setState((s) => {
-      const cur = s.students[studentId];
-      let scores = cur.scores;
-      for (const c of studentCriteria) scores = setScore(scores, c.id, v);
-      return { ...s, students: { ...s.students, [studentId]: { ...cur, scores } } };
     });
 
   // ---- indicadores
@@ -305,53 +316,6 @@ export function EvaluationForm(props: EvaluationFormProps) {
       </div>
     );
 
-  const deliverablesList = (
-    <ul className="flex flex-col gap-2.5">
-      {props.deliverables.map((d) => (
-        <li key={d.id} className="flex flex-col gap-1">
-          <div className="flex items-center justify-between gap-2 text-sm">
-            <span className="truncate">{d.title}</span>
-            {d.due_date && <span className="shrink-0 text-xs text-muted-foreground">{formatDate(d.due_date, "dd/MM")}</span>}
-          </div>
-          {props.canUpdateDeliverables ? (
-            <NativeSelect
-              className="h-8"
-              defaultValue={d.status}
-              aria-label={`Status de ${d.title}`}
-              onChange={(e) => {
-                const value = e.target.value;
-                startDeliverable(async () => {
-                  const r = await setDeliverableStatus(challengeId, d.id, value);
-                  if (r.ok) toast.success(`${d.title}: ${DELIVERABLE_STATUS[value as DeliverableStatus]}`);
-                  else toast.error(r.error);
-                });
-              }}
-            >
-              {Object.entries(DELIVERABLE_STATUS).map(([v, l]) => (
-                <option key={v} value={v}>
-                  {l}
-                </option>
-              ))}
-            </NativeSelect>
-          ) : (
-            <StatusBadge tone={DELIVERABLE_TONE[d.status]}>{DELIVERABLE_STATUS[d.status]}</StatusBadge>
-          )}
-        </li>
-      ))}
-    </ul>
-  );
-
-  const historyList = (
-    <ul className="flex flex-col gap-2 text-sm">
-      {props.history.map((h, i) => (
-        <li key={i} className="flex justify-between gap-2">
-          <span>{h.action === "INSERT" ? "Criada" : h.action === "UPDATE" ? "Alterada" : "Excluída"} {h.name && `por ${h.name}`}</span>
-          <span className="shrink-0 text-xs text-muted-foreground">{formatDateTime(h.changed_at)}</span>
-        </li>
-      ))}
-    </ul>
-  );
-
   const joinedNotice = props.joinedLater && (
     <div className="flex flex-col gap-3 border-t bg-warning-soft/60 px-5 py-4 text-sm sm:flex-row sm:items-center sm:justify-between">
       <p className="text-warning">
@@ -394,8 +358,8 @@ export function EvaluationForm(props: EvaluationFormProps) {
           )}
           {pendingStudents > 0 && <span className="text-warning">{pendingStudents} aluno(s) sem avaliação individual.</span>}
           {status === "concluida"
-            ? "A alteração ficará registrada no histórico da avaliação."
-            : "Você ainda poderá corrigir depois; as alterações ficam registradas no histórico."}
+            ? "A correção substituirá o registro atual."
+            : "Você ainda poderá corrigir depois."}
         </span>
       }
       confirmLabel={status === "concluida" ? "Salvar correção" : "Concluir"}
@@ -432,8 +396,6 @@ export function EvaluationForm(props: EvaluationFormProps) {
       restoreBanner={restoreBanner}
       joinedNotice={joinedNotice}
       previousBody={previousBody(!canEdit)}
-      deliverables={props.deliverables.length > 0 ? deliverablesList : null}
-      history={props.history.length > 0 ? historyList : null}
       concludeButton={concludeButton("h-11 w-full")}
     />
     {/* só esmaece: a barra de ações fixa ficaria fora do lugar com transform no pai */}
@@ -494,76 +456,55 @@ export function EvaluationForm(props: EvaluationFormProps) {
         </section>
       )}
 
-      <div className="contents xl:grid xl:grid-cols-[1fr_320px] xl:gap-5">
-        <div className="flex min-w-0 flex-col gap-5">
-          {/* Avaliação coletiva */}
-          <section className="rounded-2xl border bg-card p-4 sm:p-5">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-              <h3 className="font-semibold">Avaliação coletiva</h3>
-              <span className="text-sm text-muted-foreground">
-                {teamFilled}/{teamCriteria.length} critérios · média <strong className="text-foreground">{formatAverage(teamAvg)}</strong>
-              </span>
-            </div>
-            <ul className="divide-y">
-              {teamCriteria.map((c) => (
-                <li key={c.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">
-                      {c.name}
-                      {!c.is_active && <span className="ml-2 text-xs text-muted-foreground">(versão {c.version}, desativada)</span>}
-                    </p>
-                    {c.description && <p className="text-xs text-muted-foreground">{c.description}</p>}
-                  </div>
-                  <ScoreSegment
-                    label={c.name}
-                    value={toScore(state.team_scores, c.id)}
-                    disabled={disabled}
-                    onChange={(v) => patch({ team_scores: setScore(state.team_scores, c.id, v) })}
-                  />
-                </li>
-              ))}
-            </ul>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              {TEXT_FIELDS.map(([key, label]) => (
-                <label key={key} className={cn("flex flex-col gap-1.5", key === "general_notes" && "md:col-span-2")}>
-                  <span className="text-sm font-medium">{label}</span>
-                  <Textarea
-                    rows={3}
-                    value={state[key]}
-                    disabled={disabled}
-                    onChange={(e) => patch({ [key]: e.target.value } as Partial<FormState>)}
-                  />
-                </label>
-              ))}
-            </div>
-          </section>
-
+      {/* Avaliação coletiva */}
+      <section className="rounded-2xl border bg-card p-4 sm:p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-semibold">Avaliação coletiva</h3>
+          <span className="text-sm text-muted-foreground">
+            {teamFilled}/{teamCriteria.length} critérios · média <strong className="text-foreground">{formatAverage(teamAvg)}</strong>
+          </span>
         </div>
-
-        {/* Lateral */}
-        <aside className="flex flex-col gap-5 max-xl:order-last">
-          <section className="rounded-2xl border bg-card p-4">
-            <h3 className="mb-3 font-semibold">Entregas da equipe</h3>
-            {props.deliverables.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhuma entrega cadastrada.</p>
-            ) : (
-              deliverablesList
-            )}
-          </section>
-
-          {props.history.length > 0 && (
-            <section className="rounded-2xl border bg-card p-4">
-              <h3 className="mb-3 font-semibold">Histórico de alterações</h3>
-              {historyList}
-            </section>
-          )}
-        </aside>
-      </div>
+        <ul className="divide-y">
+          {teamCriteria.map((c) => (
+            <li key={c.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-medium">
+                  {c.name}
+                  {!c.is_active && <span className="ml-2 text-xs text-muted-foreground">(versão {c.version}, desativada)</span>}
+                </p>
+                {c.description && <p className="text-xs text-muted-foreground">{c.description}</p>}
+              </div>
+              <ScoreSegment
+                label={c.name}
+                value={toScore(state.team_scores, c.id)}
+                disabled={disabled}
+                onChange={(v) => patch({ team_scores: setScore(state.team_scores, c.id, v) })}
+              />
+            </li>
+          ))}
+        </ul>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          {TEXT_FIELDS.map(([key, label]) => (
+            <label key={key} className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium">{label}</span>
+              <Textarea
+                rows={3}
+                value={state[key]}
+                disabled={disabled}
+                onChange={(e) => patch({ [key]: e.target.value } as Partial<FormState>)}
+              />
+            </label>
+          ))}
+        </div>
+      </section>
 
       {/* Avaliação individual */}
       <section className="rounded-2xl border bg-card">
         <div className="flex flex-wrap items-center justify-between gap-2 p-4 sm:px-5">
-          <h3 className="font-semibold">Avaliação individual</h3>
+          <div>
+            <h3 className="font-semibold">Avaliação individual</h3>
+            <p className="text-xs text-muted-foreground">Clique em um aluno para abrir as perguntas.</p>
+          </div>
           <span className="text-sm text-muted-foreground">
             {evaluatedStudents}/{students.length} alunos avaliados
           </span>
@@ -575,42 +516,22 @@ export function EvaluationForm(props: EvaluationFormProps) {
         ) : (
           <>
             <div className="overflow-x-auto border-t">
-              <table className="w-full text-sm">
+              {/* em telas menores as colunas dividem a largura, sem rolagem lateral */}
+              <table className="w-full table-fixed text-sm min-[1360px]:table-auto">
                 <thead className="bg-surface text-left">
                   <tr>
-                    <th className="sticky left-0 z-10 min-w-48 bg-surface px-4 py-2 font-medium">Aluno</th>
+                    <th className="px-4 py-2 font-medium min-[1360px]:min-w-48">Aluno</th>
                     {studentCriteria.map((c) => (
-                      <th key={c.id} className="min-w-20 px-1.5 py-2 text-center align-bottom font-normal">
-                        <span className="block text-xs leading-tight font-medium text-foreground" title={c.description || c.name}>
+                      <th key={c.id} className="px-1 py-2 text-center align-bottom font-normal max-[1359px]:w-[10%] min-[1360px]:min-w-20 min-[1360px]:px-1.5">
+                        <span className="block truncate text-xs leading-tight font-medium text-foreground" title={c.description || c.name}>
                           {c.name}
                         </span>
-                        {canEdit && (
-                          <select
-                            aria-label={`Aplicar nota a todos em ${c.name}`}
-                            className="mt-1 h-6 w-full rounded border bg-card text-center text-xs text-muted-foreground"
-                            value=""
-                            disabled={disabled}
-                            onChange={(e) => {
-                              const v = e.target.value;
-                              fillColumn(c.id, v === "clear" ? undefined : v === "no" ? null : Number(v));
-                            }}
-                          >
-                            <option value="">todos…</option>
-                            {SCORE_VALUES.map((n) => (
-                              <option key={n} value={n}>
-                                {n}
-                              </option>
-                            ))}
-                            <option value="no">N/O</option>
-                            <option value="clear">limpar</option>
-                          </select>
-                        )}
+                        {canEdit && <FillSelect label={`Aplicar nota a todos em ${c.name}`} disabled={disabled} onFill={(v) => fillColumn(c.id, v)} />}
                       </th>
                     ))}
-                    <th className="px-2 py-2 text-center font-medium">Média</th>
-                    <th className="min-w-44 px-2 py-2 font-medium">Situação</th>
-                    <th className="px-2 py-2 text-center font-medium">Ausente</th>
-                    <th className="px-2 py-2" />
+                    <th className="px-1 py-2 text-center font-medium max-[1359px]:w-[6%] min-[1360px]:px-2">Nota</th>
+                    <th className="px-1 py-2 font-medium max-[1359px]:w-[16%] min-[1360px]:min-w-44 min-[1360px]:px-2">Situação</th>
+                    <th className="py-2 text-center font-medium max-[1359px]:w-[8%] max-[1359px]:text-xs min-[1360px]:px-2">Ausente</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -618,11 +539,16 @@ export function EvaluationForm(props: EvaluationFormProps) {
                     const s = state.students[st.id] ?? emptyStudent();
                     const avg = average(studentCriteria.map((c) => toScore(s.scores, c.id)));
                     const prev = previous?.students[st.id];
-                    const open = expanded[st.id];
+                    const open = activeStudent === st.id && !s.absent;
                     return (
-                      <StudentRowGroup key={st.id}>
-                        <tr className={cn(s.absent && "bg-surface/60")}>
-                          <td className="sticky left-0 z-10 bg-card px-4 py-2">
+                      <Fragment key={st.id}>
+                        <tr
+                          data-student-row="aluno"
+                          onClick={(e) => activateStudent(st.id, e.currentTarget)}
+                          onFocus={(e) => activateStudent(st.id, e.currentTarget)}
+                          className={cn("transition-colors", s.absent ? "bg-surface/60" : open ? "border-b-0 bg-brand-soft/30" : "cursor-pointer hover:bg-surface/50")}
+                        >
+                          <td className="px-4 py-2">
                             <p className="font-medium">{st.full_name}</p>
                             <p className="text-xs text-muted-foreground">
                               {st.registration ?? "Sem matrícula"}
@@ -637,7 +563,7 @@ export function EvaluationForm(props: EvaluationFormProps) {
                             </p>
                           </td>
                           {studentCriteria.map((c) => (
-                            <td key={c.id} className="px-1.5 py-2">
+                            <td key={c.id} className="px-1 py-2 min-[1360px]:px-1.5">
                               <ScoreSelect
                                 label={`${c.name} — ${st.full_name}`}
                                 value={toScore(s.scores, c.id)}
@@ -646,20 +572,12 @@ export function EvaluationForm(props: EvaluationFormProps) {
                               />
                             </td>
                           ))}
-                          <td className={cn("px-2 py-2 text-center font-medium tabular-nums", isLowAverage(avg) && "text-danger")}>
-                            {formatAverage(avg)}
+                          <td className={cn("px-1 py-2 text-center font-medium tabular-nums min-[1360px]:px-2", isLowAverage(avg) && "text-danger")}>{formatAverage(avg)}</td>
+                          <td className="px-1 py-2 min-[1360px]:px-2">
+                            <FollowupSelect value={s.followup_status} disabled={disabled} onChange={(v) => patchStudent(st.id, { followup_status: v })} />
+                            {isLowAverage(avg) && !s.followup_status && <p className="mt-1 text-[11px] text-warning">Nota baixa — avalie a situação</p>}
                           </td>
-                          <td className="px-2 py-2">
-                            <FollowupSelect
-                              value={s.followup_status}
-                              disabled={disabled}
-                              onChange={(v) => patchStudent(st.id, { followup_status: v })}
-                            />
-                            {isLowAverage(avg) && !s.followup_status && (
-                              <p className="mt-1 text-[11px] text-warning">Média baixa — avalie a situação</p>
-                            )}
-                          </td>
-                          <td className="px-2 py-2 text-center">
+                          <td className="py-2 text-center min-[1360px]:px-2">
                             <input
                               type="checkbox"
                               className="size-4 accent-[var(--brand)]"
@@ -669,35 +587,18 @@ export function EvaluationForm(props: EvaluationFormProps) {
                               onChange={(e) => patchStudent(st.id, { absent: e.target.checked })}
                             />
                           </td>
-                          <td className="px-2 py-2">
-                            <Button
-                              variant={open ? "secondary" : "ghost"}
-                              size="icon-sm"
-                              aria-label={`Observações de ${st.full_name}`}
-                              aria-expanded={open}
-                              onClick={() => setExpanded((e) => ({ ...e, [st.id]: !open }))}
-                              className={cn((s.notes || s.difficulty || s.guidance) && "text-brand")}
-                            >
-                              <MessageSquareTextIcon />
-                            </Button>
-                          </td>
                         </tr>
+                        {/* fecha sem animar: a posição da linha tocada é compensada de uma vez */}
                         {open && (
-                          <tr className="bg-surface/40">
-                            <td colSpan={studentCriteria.length + 5} className="px-4 py-3">
+                          <tr data-student-row="perguntas" className="bg-brand-soft/30">
+                            <td colSpan={studentCriteria.length + 4} className="px-4 pt-1 pb-5">
                               <Collapse open appear>
-                                <StudentNotes
-                                  s={s}
-                                  disabled={disabled}
-                                  prevDifficulty={prev?.difficulty}
-                                  onChange={(p) => patchStudent(st.id, p)}
-                                  onFillRow={canEdit ? (v) => fillRow(st.id, v) : undefined}
-                                />
+                                <StudentQuestions s={s} rows={3} disabled={disabled} prevDifficulty={prev?.difficulty} onChange={(p) => patchStudent(st.id, p)} />
                               </Collapse>
                             </td>
                           </tr>
                         )}
-                      </StudentRowGroup>
+                      </Fragment>
                     );
                   })}
                 </tbody>
@@ -742,8 +643,28 @@ export function EvaluationForm(props: EvaluationFormProps) {
   );
 }
 
-function StudentRowGroup({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+function FillSelect({ label, disabled, onFill }: { label: string; disabled?: boolean; onFill: (v: Score) => void }) {
+  return (
+    <select
+      aria-label={label}
+      className="mt-1 h-6 w-full min-w-0 rounded border bg-card text-center text-xs text-muted-foreground"
+      value=""
+      disabled={disabled}
+      onChange={(e) => {
+        const v = e.target.value;
+        onFill(v === "clear" ? undefined : v === "no" ? null : Number(v));
+      }}
+    >
+      <option value="">todos…</option>
+      {SCORE_VALUES.map((n) => (
+        <option key={n} value={n}>
+          {n}
+        </option>
+      ))}
+      <option value="no">N/O</option>
+      <option value="clear">limpar</option>
+    </select>
+  );
 }
 
 function PrevBlock({ title, text }: { title: string; text: string }) {

@@ -18,7 +18,7 @@ export async function rosterOn(supabase: ServerSupabase, teamId: string, date: s
 }
 
 const TEAM_EVAL_SELECT =
-  "id, status, monitor_id, developed, difficulties, deliveries_completed, next_steps, general_notes, previous_difficulties_status, previous_followup_notes, submitted_at, created_at, updated_at, monitor:profiles!team_evaluations_monitor_id_fkey(full_name), evaluation_scores(criterion_id, score), student_evaluations(id, student_id, absent, followup_status, notes, difficulty, guidance, evaluation_scores(criterion_id, score))";
+  "id, status, monitor_id, developed, difficulties, deliveries_completed, next_steps, general_notes, previous_difficulties_status, previous_followup_notes, submitted_at, created_at, updated_at, monitor:profiles!team_evaluations_monitor_id_fkey(full_name), evaluation_scores(criterion_id, score), student_evaluations(id, student_id, absent, followup_status, activities, deliveries, commitments, notes, difficulty, guidance, evaluation_scores(criterion_id, score))";
 
 export async function loadEvaluationContext(sessionId: string, teamId: string) {
   const supabase = await createClient();
@@ -38,7 +38,7 @@ export async function loadEvaluationContext(sessionId: string, teamId: string) {
     .maybeSingle();
   if (!team) return null;
 
-  const [roster, criteriaRes, evalRes, prevRes, deliverablesRes, laterRes] = await Promise.all([
+  const [roster, criteriaRes, evalRes, prevRes, laterRes] = await Promise.all([
     rosterOn(supabase, teamId, session.session_date),
     supabase
       .from("evaluation_criteria")
@@ -53,11 +53,6 @@ export async function loadEvaluationContext(sessionId: string, teamId: string) {
       .lt("session.session_date", session.session_date)
       .order("session(session_date)", { ascending: false })
       .limit(1),
-    supabase
-      .from("team_deliverables")
-      .select("id, title, due_date, status, completed_at, notes")
-      .eq("team_id", teamId)
-      .order("due_date", { ascending: true, nullsFirst: false }),
     // integrantes atuais que entraram na equipe DEPOIS deste dia (não aparecem na avaliação)
     supabase
       .from("team_memberships")
@@ -89,20 +84,6 @@ export async function loadEvaluationContext(sessionId: string, teamId: string) {
     extras = (data ?? []).map((s) => ({ membershipId: "", ...s }));
   }
 
-  let history: { changed_at: string; action: string; changed_by: string | null; name: string | null }[] = [];
-  if (evaluation) {
-    const { data } = await supabase
-      .from("audit_logs")
-      .select("changed_at, action, changed_by")
-      .eq("table_name", "team_evaluations")
-      .eq("record_id", evaluation.id)
-      .order("changed_at", { ascending: false })
-      .limit(20);
-    const ids = [...new Set((data ?? []).map((d) => d.changed_by).filter(Boolean))] as string[];
-    const { data: people } = ids.length ? await supabase.from("profiles").select("id, full_name").in("id", ids) : { data: [] };
-    history = (data ?? []).map((d) => ({ ...d, name: people?.find((p) => p.id === d.changed_by)?.full_name ?? null }));
-  }
-
   return {
     session,
     team,
@@ -112,8 +93,6 @@ export async function loadEvaluationContext(sessionId: string, teamId: string) {
     allCriteria,
     evaluation,
     previous,
-    deliverables: deliverablesRes.data ?? [],
-    history,
     joinedLater: later.length ? { count: later.length, firstDate: later[0].start_date } : null,
   };
 }

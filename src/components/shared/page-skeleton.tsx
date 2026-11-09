@@ -212,7 +212,7 @@ function ScoreRow({ className }: { className?: string }) {
     <div className={className}>
       <Line className="w-40" wrap="mb-2" />
       <div className="grid grid-cols-6 gap-1.5">
-        {many(6).map((i) => (
+        {many(12).map((i) => (
           <Skeleton key={i} className="h-11 rounded-lg" />
         ))}
       </div>
@@ -242,12 +242,9 @@ function DashboardSkeleton() {
           <SituationBody />
         </Panel>
       </div>
-      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
+      <div className="mt-6">
         <Panel description="w-80" extraLines={1}>
           <RowsBody rows={3} />
-        </Panel>
-        <Panel description="w-56">
-          <Skeleton className="h-[220px] rounded-xl" />
         </Panel>
       </div>
     </>
@@ -518,21 +515,15 @@ function EvaluationSkeleton() {
             </div>
           </div>
         </div>
-        <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
-          <div className={cn("p-4 sm:p-5", card)}>
-            <Line size="base" className="w-40" wrap="mb-4" />
-            <div className="divide-y">
-              {many(6).map((i) => (
-                <div key={i} className="flex items-center justify-between gap-2 py-3">
-                  <Line className="w-48" />
-                  <Skeleton className="h-9 w-[248px] rounded-lg" />
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className={cn("h-fit p-4", card)}>
-            <Line size="base" className="w-40" wrap="mb-3" />
-            <Line className="w-full" />
+        <div className={cn("p-4 sm:p-5", card)}>
+          <Line size="base" className="w-40" wrap="mb-4" />
+          <div className="divide-y">
+            {many(6).map((i) => (
+              <div key={i} className="flex items-center justify-between gap-2 py-3">
+                <Line className="w-48" />
+                <Skeleton className="h-8 w-[428px] rounded-lg" />
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -602,9 +593,6 @@ function TeamDetailSkeleton() {
               ))}
             </div>
           </Panel>
-          <Panel titleWidth="w-24">
-            <Skeleton className="h-16 rounded-xl" />
-          </Panel>
         </div>
         <div className="flex flex-col gap-6">
           <Panel titleWidth="w-56">
@@ -615,36 +603,6 @@ function TeamDetailSkeleton() {
           </Panel>
         </div>
       </div>
-    </div>
-  );
-}
-
-function DeliverablesSkeleton() {
-  return (
-    <div className="grid gap-6 xl:grid-cols-[340px_1fr]">
-      <Panel titleWidth="w-40" description="w-44">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap gap-2">
-            <Skeleton className="h-8 w-28 rounded-lg" />
-            <Skeleton className="h-8 w-52 rounded-lg" />
-          </div>
-          <div className="divide-y rounded-xl border">
-            {many(4).map((i) => (
-              <div key={i} className="px-3 py-2">
-                <Line className="w-3/5" />
-                <Line size="xs" className="w-28" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </Panel>
-      <Panel titleWidth="w-44" description="w-72">
-        <div className="flex flex-col gap-1">
-          {many(8).map((i) => (
-            <Skeleton key={i} className="h-8 rounded-md" />
-          ))}
-        </div>
-      </Panel>
     </div>
   );
 }
@@ -668,14 +626,9 @@ function ResultsSkeleton() {
           <SituationBody />
         </Panel>
       </div>
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <Panel titleWidth="w-52">
-          <RowsBody rows={3} />
-        </Panel>
-        <Panel titleWidth="w-52">
-          <Skeleton className="h-[220px] rounded-xl" />
-        </Panel>
-      </div>
+      <Panel titleWidth="w-52">
+        <RowsBody rows={3} />
+      </Panel>
     </div>
   );
 }
@@ -770,7 +723,6 @@ function challengeBody(rest: string[]) {
   if (!section) return <FollowUpHomeSkeleton />;
   if (section === "acompanhamentos") return b ? <EvaluationSkeleton /> : a ? <SessionDaySkeleton /> : <FollowUpHomeSkeleton />;
   if (section === "equipes") return !a ? <TeamsBoardSkeleton /> : a === "importar" ? <ImportSkeleton /> : <TeamDetailSkeleton />;
-  if (section === "entregas") return <DeliverablesSkeleton />;
   if (section === "resultados") return <ResultsSkeleton />;
   if (section === "historico") return <HistorySkeleton />;
   if (section === "configuracoes") return <SettingsSkeleton />;

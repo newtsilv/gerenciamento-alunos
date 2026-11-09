@@ -17,9 +17,9 @@ function activeTextField(): HTMLElement | null {
 /**
  * Mantém visível o que está sendo digitado no celular.
  *
- * O teclado não muda o tamanho da página, só cobre a parte de baixo. A API `visualViewport`
- * informa a área que continua visível; a partir dela o app reserva o espaço do teclado,
- * esconde as barras fixas e rola a tela até o campo.
+ * O teclado só cobre a parte de baixo da página, e o navegador já consegue deslocar a área
+ * visível até o campo. Por isso a página não ganha altura nenhuma: aqui só se esconde as
+ * barras fixas e se avisa o navegador de que os cabeçalhos grudados também tapam a tela.
  */
 export function KeyboardAware() {
   useEffect(() => {
@@ -28,46 +28,32 @@ export function KeyboardAware() {
     const root = document.documentElement;
     let frame = 0;
 
-    const syncInset = () => {
+    const sync = () => {
       const covered = window.innerHeight - viewport.height;
-      const isOpen = viewport.scale <= 1.01 && covered > MIN_KEYBOARD_HEIGHT && !!activeTextField();
+      const field = activeTextField();
+      const isOpen = viewport.scale <= 1.01 && covered > MIN_KEYBOARD_HEIGHT && !!field;
       root.style.setProperty("--keyboard-inset", `${isOpen ? Math.round(covered) : 0}px`);
       root.toggleAttribute("data-keyboard-open", isOpen);
-      return isOpen;
-    };
-
-    const keepFieldVisible = () => {
-      const field = activeTextField();
-      if (!field) return;
-      if (field.closest('[data-slot="dialog-content"]')) {
-        field.scrollIntoView({ block: "center" });
+      if (!isOpen || !field) {
+        root.style.scrollPadding = "";
         return;
       }
-      // cabeçalhos grudados no topo também tapam a tela
       const headerBottom = Math.max(0, ...[...document.querySelectorAll("[data-sticky-top]")].map((h) => h.getBoundingClientRect().bottom));
-      const visibleTop = Math.max(headerBottom, viewport.offsetTop) + MARGIN;
-      const visibleBottom = viewport.offsetTop + viewport.height - MARGIN;
-      const rect = field.getBoundingClientRect();
-      // campo maior que a área livre: prioriza o fim, onde o texto está sendo escrito
-      if (rect.bottom > visibleBottom) window.scrollBy(0, rect.bottom - visibleBottom);
-      else if (rect.top < visibleTop) window.scrollBy(0, rect.top - visibleTop);
+      root.style.scrollPadding = `${Math.round(headerBottom) + MARGIN}px 0 ${MARGIN}px`;
+      field.scrollIntoView({ block: "nearest" });
     };
 
     const update = () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        if (syncInset()) keepFieldVisible();
-      });
+      frame = requestAnimationFrame(sync);
     };
 
     viewport.addEventListener("resize", update);
     document.addEventListener("focusin", update);
-    document.addEventListener("input", update); // o campo cresce conforme se escreve
     return () => {
       cancelAnimationFrame(frame);
       viewport.removeEventListener("resize", update);
       document.removeEventListener("focusin", update);
-      document.removeEventListener("input", update);
     };
   }, []);
 

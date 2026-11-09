@@ -4,7 +4,6 @@ import Link from "next/link";
 import { ChevronRightIcon } from "lucide-react";
 import { Panel } from "@/components/dashboard/widgets";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { DeliverablesEditor } from "@/components/teams/deliverables-editor";
 import { NotesPanel } from "@/components/teams/notes-panel";
 import { requireChallengeAccess } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -25,7 +24,7 @@ export default async function TeamDetailPage({ params }: PageProps<"/desafios/[i
     .maybeSingle();
   if (!team) notFound();
 
-  const [membershipsRes, evalsRes, deliverablesRes, notesRes] = await Promise.all([
+  const [membershipsRes, evalsRes, notesRes] = await Promise.all([
     supabase
       .from("team_memberships")
       .select("id, start_date, end_date, end_reason, student:students(id, full_name, registration)")
@@ -38,11 +37,6 @@ export default async function TeamDetailPage({ params }: PageProps<"/desafios/[i
       )
       .eq("team_id", teamId)
       .order("session(session_date)", { ascending: false }),
-    supabase
-      .from("team_deliverables")
-      .select("id, milestone_id, title, description, due_date, status, completed_at, notes")
-      .eq("team_id", teamId)
-      .order("due_date", { ascending: true, nullsFirst: false }),
     supabase
       .from("pedagogical_notes")
       .select("id, content, created_at, author_id, author:profiles(full_name), student:students(full_name)")
@@ -95,15 +89,6 @@ export default async function TeamDetailPage({ params }: PageProps<"/desafios/[i
                 </ul>
               </details>
             )}
-          </Panel>
-          <Panel title="Entregas">
-            <DeliverablesEditor
-              challengeId={id}
-              teamId={teamId}
-              deliverables={deliverablesRes.data ?? []}
-              canManage={access.canManage}
-              canUpdate
-            />
           </Panel>
         </div>
         <div className="flex flex-col gap-6">

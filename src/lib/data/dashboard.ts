@@ -2,7 +2,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { average } from "@/lib/domain/scores";
 import { todayISO } from "@/lib/domain/dates";
-import type { DeliverableStatus, FollowupStatus } from "@/lib/domain/constants";
+import type { FollowupStatus } from "@/lib/domain/constants";
 
 export type DashboardFilters = {
   challengeId?: string;
@@ -63,7 +63,7 @@ export async function loadDashboard(filters: DashboardFilters) {
   const sessions = sessionsData ?? [];
   const sessionDate = new Map(sessions.map((s) => [s.id, s.session_date]));
 
-  const [evalsRes, membershipsRes, deliverablesRes, studentsCountRes] = await Promise.all([
+  const [evalsRes, membershipsRes, studentsCountRes] = await Promise.all([
     sessions.length && teamIds.length
       ? supabase
           .from("team_evaluations")
@@ -76,9 +76,6 @@ export async function loadDashboard(filters: DashboardFilters) {
     teamIds.length
       ? supabase.from("team_memberships").select("team_id, student_id").in("team_id", teamIds).is("end_date", null)
       : Promise.resolve({ data: [] as { team_id: string; student_id: string }[] }),
-    teamIds.length
-      ? supabase.from("team_deliverables").select("team_id, status, due_date").in("team_id", teamIds)
-      : Promise.resolve({ data: [] as { team_id: string; status: DeliverableStatus; due_date: string | null }[] }),
     Promise.resolve(null),
   ]);
   void studentsCountRes;
@@ -180,23 +177,6 @@ export async function loadDashboard(filters: DashboardFilters) {
   }
   attention.sort((a, b) => b.flagged.length - a.flagged.length || (a.average ?? 9) - (b.average ?? 9));
 
-  // ---- entregas
-  const deliverables = deliverablesRes.data ?? [];
-  const delivByTeam = new Map<string, Record<DeliverableStatus, number>>();
-  for (const d of deliverables) {
-    const cur = delivByTeam.get(d.team_id) ?? { nao_iniciada: 0, em_andamento: 0, concluida: 0, bloqueada: 0 };
-    cur[d.status]++;
-    delivByTeam.set(d.team_id, cur);
-  }
-  const deliverableProgress = teams
-    .map((t) => {
-      const c = delivByTeam.get(t.id) ?? { nao_iniciada: 0, em_andamento: 0, concluida: 0, bloqueada: 0 };
-      const total = c.nao_iniciada + c.em_andamento + c.concluida + c.bloqueada;
-      return { teamId: t.id, team: t.name, ...c, total, pct: total ? Math.round((c.concluida / total) * 100) : 0 };
-    })
-    .sort((a, b) => a.team.localeCompare(b.team, "pt-BR", { numeric: true }));
-  const overdue = deliverables.filter((d) => d.status !== "concluida" && d.due_date && d.due_date < today).length;
-
   // ---- última sessão (pendências)
   const lastSession = [...sessions].reverse().find(Boolean);
   const lastSessionPending = lastSession
@@ -218,8 +198,6 @@ export async function loadDashboard(filters: DashboardFilters) {
     situation,
     notEvaluatedStudents,
     attention,
-    deliverableProgress,
-    overdue,
     lastSession: lastSession ? { ...lastSession, pending: lastSessionPending } : null,
   };
 }
@@ -242,17 +220,6 @@ function emptyDashboard(challenges: { id: string; name: string; status: string; 
     situation: { evoluindo_bem: 0, precisa_atencao: 0, necessita_intervencao: 0, sem_situacao: 0 },
     notEvaluatedStudents: 0,
     attention: [] as AttentionTeam[],
-    deliverableProgress: [] as {
-      teamId: string;
-      team: string;
-      nao_iniciada: number;
-      em_andamento: number;
-      concluida: number;
-      bloqueada: number;
-      total: number;
-      pct: number;
-    }[],
-    overdue: 0,
     lastSession: null as null | { id: string; challenge_id: string; session_date: string; pending: number },
   };
 }
