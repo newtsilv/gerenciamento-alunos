@@ -1,5 +1,6 @@
 "use client";
 
+import { Stagger, StaggerItem } from "@/components/shared/motion";
 import { useMemo, useState } from "react";
 import { CalendarDaysIcon, CalendarRangeIcon, UsersIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -19,9 +20,10 @@ export function ReportsForm({ challenges, today }: { challenges: Challenge[]; to
   const range = weekRange(week || today);
   const weekSessions = (challenge?.sessions ?? []).filter((s) => s.date >= range.start && s.date <= range.end);
 
-  const card = "flex flex-col gap-4 rounded-2xl border bg-card p-5 animate-fade-up";
+  const card = "flex flex-col gap-4 rounded-2xl border bg-card p-5";
   return (
-    <div className="flex flex-col gap-6">
+    <Stagger className="flex flex-col gap-6">
+      <StaggerItem>
       <Field label="Desafio" className="max-w-md">
         <NativeSelect value={challengeId} onChange={(e) => setChallengeId(e.target.value)}>
           {challenges.map((c) => (
@@ -31,9 +33,10 @@ export function ReportsForm({ challenges, today }: { challenges: Challenge[]; to
           ))}
         </NativeSelect>
       </Field>
+      </StaggerItem>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <section className={card}>
+        <StaggerItem as="section" className={card}>
           <Header icon={CalendarDaysIcon} title="Relatório diário" description="Resumo, avaliações individuais, avaliações das equipes e pendências de um dia." />
           <Field label="Data do acompanhamento">
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
@@ -55,9 +58,9 @@ export function ReportsForm({ challenges, today }: { challenges: Challenge[]; to
           <div className="mt-auto">
             <DownloadButton href={`/api/relatorios/diario?desafio=${challengeId}&data=${date}`} label="Baixar Excel diário" disabled={!challengeId || !date} />
           </div>
-        </section>
+        </StaggerItem>
 
-        <section className={card}>
+        <StaggerItem as="section" className={card}>
           <Header icon={CalendarRangeIcon} title="Relatório semanal" description="Consolida os acompanhamentos da semana: comparações, evolução, dificuldades recorrentes e pendências." />
           <Field label="Qualquer dia da semana" hint={`Semana de ${formatDate(range.start)} a ${formatDate(range.end)} · ${weekSessions.length} sessão(ões)`}>
             <Input type="date" value={week} onChange={(e) => setWeek(e.target.value)} />
@@ -65,16 +68,16 @@ export function ReportsForm({ challenges, today }: { challenges: Challenge[]; to
           <div className="mt-auto">
             <DownloadButton href={`/api/relatorios/semanal?desafio=${challengeId}&semana=${week}`} label="Baixar Excel semanal" disabled={!challengeId || !week} />
           </div>
-        </section>
+        </StaggerItem>
 
-        <section className={card}>
+        <StaggerItem as="section" className={card}>
           <Header icon={UsersIcon} title="Equipes e integrantes" description="Lista atual de equipes e alunos e o histórico de participação (transferências)." />
           <div className="mt-auto">
             <DownloadButton href={`/api/relatorios/equipes?desafio=${challengeId}`} label="Exportar equipes (.xlsx)" variant="outline" disabled={!challengeId} />
           </div>
-        </section>
+        </StaggerItem>
       </div>
-    </div>
+    </Stagger>
   );
 }
 

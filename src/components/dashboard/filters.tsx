@@ -1,12 +1,13 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useTransition } from "react";
-import { Loader2Icon, XIcon } from "lucide-react";
+import { useState, useTransition } from "react";
+import { ChevronDownIcon, Loader2Icon, SlidersHorizontalIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/shared/native-select";
 import { FOLLOWUP_STATUS } from "@/lib/domain/constants";
+import { cn } from "@/lib/utils";
 
 type Opt = { id: string; name: string };
 
@@ -36,10 +37,24 @@ export function DashboardFilters({
     }
     startTransition(() => router.replace(`${pathname}?${next.toString()}`, { scroll: false }));
   };
-  const hasAny = ["desafio", "equipe", "monitor", "de", "ate", "situacao"].some((k) => params.get(k));
+  const activeCount = ["desafio", "equipe", "monitor", "de", "ate", "situacao"].filter((k) => params.get(k)).length;
+  const hasAny = activeCount > 0;
+  const [open, setOpen] = useState(false);
 
   return (
-    <div className="mb-6 flex flex-wrap items-end gap-2 rounded-2xl border bg-card p-3">
+    <div className="mb-4 sm:mb-6">
+      {/* no celular os filtros ficam recolhidos até serem pedidos */}
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="flex h-10 items-center gap-1.5 text-sm font-medium text-muted-foreground sm:hidden"
+      >
+        <SlidersHorizontalIcon className="size-4" />
+        Filtros{hasAny && <span className="text-brand"> ({activeCount})</span>}
+        <ChevronDownIcon className={cn("size-4 transition-transform", open && "rotate-180")} />
+      </button>
+      <div className={cn("flex-wrap items-end gap-2 rounded-2xl border bg-card p-3 sm:flex", open ? "flex animate-pop-in sm:animate-none" : "hidden")}>
       {challenges && (
         <label className="flex min-w-48 flex-1 flex-col gap-1 text-xs text-muted-foreground">
           Desafio
@@ -110,6 +125,7 @@ export function DashboardFilters({
             </Button>
           )
         )}
+      </div>
       </div>
     </div>
   );

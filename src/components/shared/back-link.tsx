@@ -10,7 +10,17 @@ import { cn } from "@/lib/utils";
  * "‹ Voltar": retorna à tela anterior (como o botão do navegador).
  * Se a pessoa chegou direto por um link, vai para `fallback` (a tela "pai").
  */
-export function BackLink({ fallback, label = "Voltar", className }: { fallback: string; label?: string; className?: string }) {
+export function BackLink({
+  fallback,
+  label = "Voltar",
+  className,
+  iconOnly,
+}: {
+  fallback: string;
+  label?: string;
+  className?: string;
+  iconOnly?: boolean;
+}) {
   const router = useRouter();
   return (
     <Link
@@ -27,8 +37,8 @@ export function BackLink({ fallback, label = "Voltar", className }: { fallback: 
         className,
       )}
     >
-      <ChevronLeftIcon className="size-4" />
-      {label}
+      <ChevronLeftIcon className={iconOnly ? "size-5" : "size-4"} />
+      {iconOnly ? <span className="sr-only">{label}</span> : label}
     </Link>
   );
 }

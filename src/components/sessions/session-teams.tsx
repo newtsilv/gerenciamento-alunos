@@ -1,5 +1,6 @@
 "use client";
 
+import { Stagger, StaggerItem } from "@/components/shared/motion";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronRightIcon, SearchIcon, UsersIcon } from "lucide-react";
@@ -39,7 +40,8 @@ export function SessionTeams({
   isMonitor: boolean;
 }) {
   const [query, setQuery] = useState("");
-  const [scope, setScope] = useState(isMonitor && teams.some((t) => t.monitorId === viewerId) ? "mine" : "all");
+  const hasMine = teams.some((t) => t.monitorId === viewerId);
+  const [scope, setScope] = useState(isMonitor && hasMine ? "mine" : "all");
   const [stateFilter, setStateFilter] = useState<"" | TeamSessionState>("");
 
   const filtered = useMemo(
@@ -60,26 +62,27 @@ export function SessionTeams({
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-3 gap-3">
+    <Stagger className="flex flex-col gap-3 sm:gap-4" step={0.035}>
+      <StaggerItem className="grid grid-cols-3 gap-1.5 sm:gap-3">
         {(Object.keys(counts) as TeamSessionState[]).map((k) => (
           <button
             key={k}
             type="button"
+            aria-pressed={stateFilter === k}
             onClick={() => setStateFilter(stateFilter === k ? "" : k)}
             className={cn(
-              "rounded-xl border bg-card p-3 text-left transition-colors",
+              "flex h-10 items-center justify-between gap-1 rounded-xl border bg-card px-2.5 text-left transition-colors sm:block sm:h-auto sm:p-3",
               stateFilter === k ? "border-brand bg-brand-soft" : "hover:bg-surface",
             )}
           >
-            <p className="text-xs text-muted-foreground">{TEAM_SESSION_STATE[k]}</p>
-            <p className="text-xl font-semibold tabular-nums">{counts[k]}</p>
+            <p className="truncate text-xs text-muted-foreground">{k === "em_andamento" ? <><span className="sm:hidden">Andamento</span><span className="max-sm:hidden">{TEAM_SESSION_STATE[k]}</span></> : TEAM_SESSION_STATE[k]}</p>
+            <p className="text-sm font-semibold tabular-nums sm:text-xl">{counts[k]}</p>
           </button>
         ))}
-      </div>
+      </StaggerItem>
 
-      <div className="grid gap-2 sm:grid-cols-[1fr_200px]">
-        <div className="relative">
+      <StaggerItem className={cn("grid gap-2 sm:grid-cols-[1fr_200px]", !hasMine && "max-sm:hidden")}>
+        <div className="relative max-sm:hidden">
           <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar equipe…" className="pl-9" aria-label="Buscar equipe" />
         </div>
@@ -87,7 +90,7 @@ export function SessionTeams({
           <option value="mine">Minhas equipes</option>
           <option value="all">Todas as equipes</option>
         </NativeSelect>
-      </div>
+      </StaggerItem>
 
       {filtered.length === 0 ? (
         <EmptyState
@@ -110,8 +113,8 @@ export function SessionTeams({
         />
       ) : (
         <ul className="grid grid-cols-1 gap-2 sm:gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((t, i) => (
-            <li key={t.id} className="animate-fade-up" style={{ animationDelay: `${Math.min(i, 10) * 35}ms` }}>
+          {filtered.map((t) => (
+            <StaggerItem as="li" key={t.id}>
               <Link
                 href={`${baseHref}/${t.id}`}
                 className="group flex h-full items-center gap-3 rounded-2xl border bg-card px-4 py-3 transition-all hover:border-brand/30 hover:shadow-[0_8px_30px_-12px_rgb(0_0_0/0.15)] sm:flex-col sm:items-stretch sm:gap-3 sm:p-4"
@@ -139,10 +142,10 @@ export function SessionTeams({
                 </span>
                 <ChevronRightIcon className="size-5 shrink-0 text-muted-foreground sm:hidden" />
               </Link>
-            </li>
+            </StaggerItem>
           ))}
         </ul>
       )}
-    </div>
+    </Stagger>
   );
 }

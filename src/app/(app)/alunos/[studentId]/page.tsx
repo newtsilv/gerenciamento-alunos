@@ -1,3 +1,4 @@
+import { Stagger } from "@/components/shared/motion";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { PageContainer, PageHeader } from "@/components/shared/page-header";
@@ -41,7 +42,7 @@ export default async function StudentPage({ params }: PageProps<"/alunos/[studen
         description={[student.registration && `Matrícula ${student.registration}`, student.email].filter(Boolean).join(" · ")}
         actions={canEdit ? <StudentEditDialog student={student} /> : undefined}
       />
-      <div className="grid gap-6 xl:grid-cols-[1fr_1.5fr]">
+      <Stagger className="grid gap-6 xl:grid-cols-[1fr_1.5fr]">
         <Panel title="Participação em equipes">
           <ul className="divide-y">
             {(memberships ?? []).map((m) => (
@@ -88,7 +89,7 @@ export default async function StudentPage({ params }: PageProps<"/alunos/[studen
             </ul>
           )}
         </Panel>
-      </div>
+      </Stagger>
     </PageContainer>
   );
 }

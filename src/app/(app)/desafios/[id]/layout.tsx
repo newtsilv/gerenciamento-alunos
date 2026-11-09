@@ -1,7 +1,9 @@
+import { Reveal } from "@/components/shared/motion";
 import { ChallengeBackLink } from "@/components/challenges/challenge-back-link";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { ChallengeChrome } from "@/components/challenges/challenge-chrome";
 import { ChallengeTabs } from "@/components/challenges/challenge-tabs";
 import { requireChallengeAccess } from "@/lib/auth";
 import { getChallenge } from "@/lib/data/challenges";
@@ -16,17 +18,19 @@ export default async function ChallengeLayout({ children, params }: LayoutProps<
 
   return (
     <PageContainer>
-      <header className="mb-4 animate-fade-up">
-        <ChallengeBackLink challengeId={id} />
-        <div className="mt-1 flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-semibold sm:text-[1.75rem]">{challenge.name}</h1>
-          {challenge.status !== "ativo" && <StatusBadge tone={CHALLENGE_STATUS_TONE[challenge.status]}>{CHALLENGE_STATUS[challenge.status]}</StatusBadge>}
-        </div>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          {[challenge.company, `${formatDate(challenge.start_date)} a ${formatDate(challenge.end_date)}`].filter(Boolean).join(" · ")}
-        </p>
-      </header>
-      <ChallengeTabs challengeId={id} canManage={access.canManage} />
+      <ChallengeChrome>
+        <Reveal as="header" className="mb-2 sm:mb-4">
+          <ChallengeBackLink challengeId={id} />
+          <div className="mt-1 flex flex-wrap items-center gap-3">
+            <h1 className="text-lg font-semibold max-sm:truncate sm:text-[1.75rem]">{challenge.name}</h1>
+            {challenge.status !== "ativo" && <StatusBadge tone={CHALLENGE_STATUS_TONE[challenge.status]}>{CHALLENGE_STATUS[challenge.status]}</StatusBadge>}
+          </div>
+          <p className="mt-0.5 text-sm text-muted-foreground max-sm:hidden">
+            {[challenge.company, `${formatDate(challenge.start_date)} a ${formatDate(challenge.end_date)}`].filter(Boolean).join(" · ")}
+          </p>
+        </Reveal>
+        <ChallengeTabs challengeId={id} canManage={access.canManage} />
+      </ChallengeChrome>
       {children}
     </PageContainer>
   );

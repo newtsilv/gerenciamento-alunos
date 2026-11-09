@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
-import { buildNav } from "./nav-config";
+import { buildNav, isEvaluationPath } from "./nav-config";
 import { UserCard, type SidebarUser } from "./user-card";
 import { BottomNav } from "./bottom-nav";
 
@@ -44,9 +44,10 @@ function Nav({ items }: { items: ReturnType<typeof buildNav> }) {
 
 export function Sidebar({ user, isAdmin, isCoordinator }: { user: SidebarUser; isAdmin: boolean; isCoordinator: boolean }) {
   const items = buildNav({ isAdmin, isCoordinator });
+  const pathname = usePathname();
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-14 items-center border-b bg-background/90 px-4 backdrop-blur-md lg:hidden">
+      <header data-sticky-top className={cn("sticky top-0 z-30 flex h-14 items-center border-b bg-background/90 px-4 backdrop-blur-md lg:hidden", isEvaluationPath(pathname) && "max-md:hidden")}>
         <Logo />
       </header>
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r bg-sidebar py-8 pl-5 lg:flex">

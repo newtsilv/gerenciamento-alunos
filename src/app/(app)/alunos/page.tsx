@@ -1,3 +1,4 @@
+import { Stagger, StaggerItem } from "@/components/shared/motion";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -35,13 +36,14 @@ export default async function StudentsPage({ searchParams }: PageProps<"/alunos"
   return (
     <PageContainer>
       <PageHeader title="Alunos" description={`${count ?? 0} aluno(s) visíveis para você.`} />
-      <div className="mb-4 sm:w-96">
+      <Stagger>
+      <StaggerItem className="mb-4 sm:w-96">
         <SearchBox placeholder="Buscar por nome, matrícula ou e-mail…" />
-      </div>
+      </StaggerItem>
       {!data?.length ? (
         <EmptyState icon={GraduationCapIcon} title="Nenhum aluno encontrado" description={q ? "Tente outro termo." : "Importe uma planilha em um desafio para cadastrar alunos."} />
       ) : (
-        <div className="overflow-x-auto rounded-2xl border bg-card">
+        <StaggerItem className="overflow-x-auto rounded-2xl border bg-card">
           <table className="w-full text-sm">
             <thead className="text-left text-muted-foreground">
               <tr className="border-b">
@@ -75,8 +77,9 @@ export default async function StudentsPage({ searchParams }: PageProps<"/alunos"
               })}
             </tbody>
           </table>
-        </div>
+        </StaggerItem>
       )}
+      </Stagger>
       {pages > 1 && (
         <nav className="mt-4 flex items-center justify-center gap-2 text-sm">
           {page > 1 && (

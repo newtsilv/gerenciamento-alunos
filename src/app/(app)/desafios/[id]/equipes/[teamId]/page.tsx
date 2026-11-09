@@ -1,3 +1,4 @@
+import { Stagger, StaggerItem } from "@/components/shared/motion";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronRightIcon } from "lucide-react";
@@ -54,8 +55,8 @@ export default async function TeamDetailPage({ params }: PageProps<"/desafios/[i
   const past = memberships.filter((m) => m.end_date !== null && m.student);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
+    <Stagger className="flex flex-col gap-6">
+      <StaggerItem>
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-xl font-semibold">{team.name}</h2>
           {!team.active && <StatusBadge>Desativada</StatusBadge>}
@@ -63,7 +64,7 @@ export default async function TeamDetailPage({ params }: PageProps<"/desafios/[i
         <p className="text-sm text-muted-foreground">
           {team.project_title || "Sem título de projeto"} · Monitor: {team.monitor?.full_name ?? "—"}
         </p>
-      </div>
+      </StaggerItem>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_1.3fr]">
         <div className="flex flex-col gap-6">
@@ -164,6 +165,6 @@ export default async function TeamDetailPage({ params }: PageProps<"/desafios/[i
           </Panel>
         </div>
       </div>
-    </div>
+    </Stagger>
   );
 }

@@ -1,3 +1,4 @@
+import { Stagger, StaggerItem } from "@/components/shared/motion";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRightIcon, TrophyIcon } from "lucide-react";
@@ -34,16 +35,15 @@ export default async function ChallengesPage() {
           action={viewer.isAdmin ? <NewChallengeDialog /> : undefined}
         />
       ) : (
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          {challenges.map((c, i) => {
+        <Stagger className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {challenges.map((c) => {
             const days = c.monitoring_weekdays.map((d) => `${WEEKDAYS[d].toLowerCase()}s`).join(" e ");
             const teams = c.teams[0]?.count ?? 0;
             return (
+              <StaggerItem key={c.id} className="min-w-0">
               <Link
-                key={c.id}
                 href={`/desafios/${c.id}`}
-                style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}
-                className="group flex min-w-0 animate-fade-up items-center gap-3 rounded-2xl border bg-card p-4 sm:gap-4 sm:p-5 transition-all duration-300 hover:border-brand/30 hover:shadow-[0_8px_30px_-12px_rgb(0_0_0/0.15)]"
+                className="group flex h-full min-w-0 items-center gap-3 rounded-2xl border bg-card p-4 sm:gap-4 sm:p-5 transition-all duration-300 hover:border-brand/30 hover:shadow-[0_8px_30px_-12px_rgb(0_0_0/0.15)]"
               >
                 <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand sm:size-12 sm:rounded-2xl">
                   <TrophyIcon className="size-6" />
@@ -59,9 +59,10 @@ export default async function ChallengesPage() {
                 </div>
                 <ChevronRightIcon className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
               </Link>
+              </StaggerItem>
             );
           })}
-        </div>
+        </Stagger>
       )}
     </PageContainer>
   );

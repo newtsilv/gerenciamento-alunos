@@ -1,3 +1,4 @@
+import { Stagger } from "@/components/shared/motion";
 import Link from "next/link";
 import { Panel } from "@/components/dashboard/widgets";
 import { MilestonesManager } from "@/components/deliverables/milestones-manager";
@@ -32,7 +33,7 @@ export default async function DeliverablesPage({ params }: PageProps<"/desafios/
   const today = todayISO();
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[340px_1fr]">
+    <Stagger className="grid gap-6 xl:grid-cols-[340px_1fr]">
       {access.canManage ? (
         <Panel title="Marcos do desafio" description="Personalizáveis por desafio.">
           <MilestonesManager challengeId={id} milestones={ms} />
@@ -101,6 +102,6 @@ export default async function DeliverablesPage({ params }: PageProps<"/desafios/
           </div>
         )}
       </Panel>
-    </div>
+    </Stagger>
   );
 }

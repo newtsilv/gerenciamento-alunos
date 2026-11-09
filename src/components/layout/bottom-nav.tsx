@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { signOut } from "@/lib/actions/auth";
 import { cn } from "@/lib/utils";
+import { isEvaluationPath } from "./nav-config";
 import type { SidebarUser } from "./user-card";
 
 type Item = { key: string; label: string; icon: LucideIcon; href?: string; match: string[] };
@@ -104,7 +105,10 @@ export function BottomNav({ user, isAdmin, isCoordinator }: { user: SidebarUser;
   const itemClass = "relative z-10 flex h-full flex-1 flex-col items-center justify-end pb-2.5 outline-none focus-visible:text-brand";
 
   return (
-    <nav aria-label="Navegação principal" className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 lg:hidden">
+    <nav
+      aria-label="Navegação principal"
+      className={cn("hide-on-keyboard fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 lg:hidden", isEvaluationPath(pathname) && "max-md:hidden")}
+    >
       <div ref={ref} className="relative flex" style={{ height: BAR_H }}>
         {width > 0 && (
           <svg

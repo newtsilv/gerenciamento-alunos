@@ -1,3 +1,4 @@
+import { Reveal } from "@/components/shared/motion";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { HistoryIcon } from "lucide-react";
@@ -40,7 +41,7 @@ export default async function HistoryPage({ params, searchParams }: PageProps<"/
   const rows = (data ?? []).filter((e) => !situation || e.student_evaluations.some((s) => s.followup_status === situation));
 
   return (
-    <div>
+    <Reveal>
       <DashboardFilters
         teams={teams.map((t) => ({ id: t.id, name: t.name }))}
         monitors={membersByRole(challenge, "monitor").map((m) => ({ id: m.id, name: m.name }))}
@@ -105,6 +106,6 @@ export default async function HistoryPage({ params, searchParams }: PageProps<"/
         Legenda: <span className="text-warning">{FOLLOWUP_STATUS.precisa_atencao}</span> ·{" "}
         <span className="text-danger">{FOLLOWUP_STATUS.necessita_intervencao}</span>
       </p>
-    </div>
+    </Reveal>
   );
 }

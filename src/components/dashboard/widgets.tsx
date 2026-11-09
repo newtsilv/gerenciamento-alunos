@@ -1,3 +1,4 @@
+import { StaggerItem } from "@/components/shared/motion";
 import Link from "next/link";
 import { AlertTriangleIcon, CheckCircle2Icon } from "lucide-react";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -8,7 +9,7 @@ import type { DashboardData } from "@/lib/data/dashboard";
 
 export function Panel({ title, description, children, action }: { title: string; description?: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <section className="min-w-0 animate-fade-up rounded-2xl border bg-card p-4 sm:p-5">
+    <StaggerItem as="section" className="min-w-0 rounded-2xl border bg-card p-4 sm:p-5">
       <div className="mb-4 flex items-start justify-between gap-2">
         <div>
           <h2 className="font-semibold">{title}</h2>
@@ -17,7 +18,7 @@ export function Panel({ title, description, children, action }: { title: string;
         {action}
       </div>
       {children}
-    </section>
+    </StaggerItem>
   );
 }
 

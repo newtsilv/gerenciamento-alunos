@@ -1,3 +1,4 @@
+import { Stagger, StaggerItem } from "@/components/shared/motion";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { notFound } from "next/navigation";
@@ -18,7 +19,8 @@ export default async function ChallengeSettingsPage({ params }: PageProps<"/desa
   const [members, people] = [allMembers(challenge), await listLinkablePeople()];
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
+    <Stagger className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
+      <StaggerItem>
       <Card>
         <CardHeader>
           <CardTitle>Dados do desafio</CardTitle>
@@ -39,7 +41,8 @@ export default async function ChallengeSettingsPage({ params }: PageProps<"/desa
           />
         </CardContent>
       </Card>
-      <div className="flex flex-col gap-6">
+      </StaggerItem>
+      <StaggerItem className="flex flex-col gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Equipe de acompanhamento</CardTitle>
@@ -75,7 +78,7 @@ export default async function ChallengeSettingsPage({ params }: PageProps<"/desa
             </CardContent>
           </Card>
         )}
-      </div>
-    </div>
+      </StaggerItem>
+    </Stagger>
   );
 }

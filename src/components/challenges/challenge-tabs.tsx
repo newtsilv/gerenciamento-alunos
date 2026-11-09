@@ -20,7 +20,7 @@ export function ChallengeTabs({ challengeId, canManage }: { challengeId: string;
   const settingsActive = pathname.startsWith(`${base}/configuracoes`) || pathname.startsWith(`${base}/criterios`);
 
   return (
-    <nav className="scrollbar-thin relative -mx-4 mb-6 flex items-center overflow-x-auto border-b px-2 sm:mx-0 sm:px-0" aria-label="Seções do desafio">
+    <nav className="scrollbar-thin relative -mx-4 mb-4 flex sm:mb-6 items-center overflow-x-auto border-b px-2 sm:mx-0 sm:px-0" aria-label="Seções do desafio">
       <ul className="flex min-w-max flex-1 sm:gap-1">
         {tabs.map((t) => {
           const active = isActive(t);

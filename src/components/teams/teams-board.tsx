@@ -1,5 +1,6 @@
 "use client";
 
+import { Stagger, StaggerItem } from "@/components/shared/motion";
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import {
@@ -97,7 +98,7 @@ export function TeamsBoard({
   const totalStudents = activeTeams.reduce((n, t) => n + t.members.length, 0);
 
   return (
-    <div className="flex flex-col gap-4">
+    <Stagger className="flex flex-col gap-4" step={0.035}>
       {canManage && monitors.length === 0 && (
         <div className="flex flex-col gap-3 rounded-xl border border-warning/40 bg-warning-soft px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
           <p>
@@ -106,7 +107,7 @@ export function TeamsBoard({
           <MembersDialog challengeId={challengeId} members={members} people={people} trigger={<Button size="sm" className="shrink-0" />} label="Vincular monitores" />
         </div>
       )}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <StaggerItem className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[minmax(12rem,1fr)_200px] lg:max-w-2xl">
           <div className="relative">
             <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -145,9 +146,9 @@ export function TeamsBoard({
             <TeamDialog challengeId={challengeId} monitors={monitors} trigger={<Button>Nova equipe</Button>} />
           </div>
         )}
-      </div>
+      </StaggerItem>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+      <StaggerItem className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
         <span>
           {activeTeams.length} equipe(s) ativa(s) · {totalStudents} aluno(s)
           {filtered.length !== (showInactive ? teams.length : activeTeams.length) && ` · exibindo ${filtered.length}`}
@@ -158,7 +159,7 @@ export function TeamsBoard({
             Mostrar equipes desativadas
           </label>
         )}
-      </div>
+      </StaggerItem>
 
       {teams.length === 0 ? (
         <EmptyState
@@ -190,12 +191,8 @@ export function TeamsBoard({
         />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-          {filtered.map((team, i) => (
-            <article
-              key={team.id}
-              style={{ animationDelay: `${Math.min(i, 10) * 40}ms` }}
-              className="flex animate-fade-up flex-col rounded-2xl border bg-card"
-            >
+          {filtered.map((team) => (
+            <StaggerItem as="article" key={team.id} className="flex flex-col rounded-2xl border bg-card">
               <header className="flex items-start justify-between gap-2 border-b p-4">
                 <div className="min-w-0">
                   <Link href={`/desafios/${challengeId}/equipes/${team.id}`} className="group inline-flex items-center gap-1 font-semibold hover:text-brand">
@@ -303,7 +300,7 @@ export function TeamsBoard({
                   />
                 </footer>
               )}
-            </article>
+            </StaggerItem>
           ))}
         </div>
       )}
@@ -334,6 +331,6 @@ export function TeamsBoard({
         destructive
         onConfirm={async () => (deleting ? toastResult(await deleteTeam(challengeId, deleting.id)) : true)}
       />
-    </div>
+    </Stagger>
   );
 }

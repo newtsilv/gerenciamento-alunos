@@ -1,3 +1,4 @@
+import { Reveal } from "@/components/shared/motion";
 import type { ReactNode } from "react";
 import { BackLink } from "./back-link";
 
@@ -13,7 +14,7 @@ export function PageHeader({
   back?: { href: string; label: string };
 }) {
   return (
-    <header className="mb-6 flex animate-fade-up flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <Reveal as="header" className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
         {back && (
           <BackLink fallback={back.href} className="mb-2" />
@@ -22,7 +23,7 @@ export function PageHeader({
         {description && <div className="mt-1 text-muted-foreground">{description}</div>}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap gap-2 max-sm:*:flex-1">{actions}</div>}
-    </header>
+    </Reveal>
   );
 }
 

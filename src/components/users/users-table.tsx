@@ -1,5 +1,6 @@
 "use client";
 
+import { Stagger, StaggerItem } from "@/components/shared/motion";
 import { useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -40,15 +41,15 @@ export function UsersTable({ users, viewerId, challenges }: { users: UserRow[]; 
   }, [users, q]);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+    <Stagger className="flex flex-col gap-4">
+      <StaggerItem className="flex flex-col gap-2 sm:flex-row sm:justify-between">
         <div className="relative sm:w-80">
           <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nome, RA ou e-mail…" className="pl-9" />
         </div>
         <NewUserDialog />
-      </div>
-      <div className="overflow-x-auto rounded-2xl border bg-card">
+      </StaggerItem>
+      <StaggerItem className="overflow-x-auto rounded-2xl border bg-card">
         <table className="w-full text-sm">
           <thead className="text-left text-muted-foreground">
             <tr className="border-b">
@@ -125,11 +126,11 @@ export function UsersTable({ users, viewerId, challenges }: { users: UserRow[]; 
             ))}
           </tbody>
         </table>
-      </div>
+      </StaggerItem>
       {roleUser && <RoleDialog user={roleUser} challenges={challenges} onClose={() => setRoleUser(null)} />}
       {editUser && <EditUserDialog user={editUser} onClose={() => setEditUser(null)} />}
       {pwdUser && <PasswordDialog user={pwdUser} onClose={() => setPwdUser(null)} />}
-    </div>
+    </Stagger>
   );
 }
 

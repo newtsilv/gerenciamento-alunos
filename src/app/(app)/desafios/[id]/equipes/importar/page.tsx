@@ -1,3 +1,4 @@
+import { Reveal } from "@/components/shared/motion";
 import { notFound } from "next/navigation";
 import { ImportWizard } from "@/components/import/import-wizard";
 import { requireChallengeAccess } from "@/lib/auth";
@@ -9,5 +10,9 @@ export default async function ImportPage({ params }: PageProps<"/desafios/[id]/e
   if (!access.canManage) notFound();
   const [teams, challenge] = await Promise.all([listTeams(id, { includeInactive: true }), getChallenge(id)]);
   if (!challenge) notFound();
-  return <ImportWizard challengeId={id} existingTeams={teams.map((t) => t.name)} challengeStartDate={challenge.start_date} />;
+  return (
+    <Reveal>
+      <ImportWizard challengeId={id} existingTeams={teams.map((t) => t.name)} challengeStartDate={challenge.start_date} />
+    </Reveal>
+  );
 }

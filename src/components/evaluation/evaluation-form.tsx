@@ -1,5 +1,6 @@
 "use client";
 
+import { Collapse, Reveal } from "@/components/shared/motion";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -11,7 +12,6 @@ import {
   LockIcon,
   MessageSquareTextIcon,
   SaveIcon,
-  UserXIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -38,28 +38,19 @@ import { formatDate, formatDateTime } from "@/lib/domain/dates";
 import { average, formatAverage, isLowAverage } from "@/lib/domain/scores";
 import type { EvaluationInput } from "@/lib/validation";
 import { ScoreSegment, ScoreSelect, type Score } from "./score-input";
-
-type Criterion = { id: string; name: string; description: string; is_active: boolean; version: number };
-type ScoreMap = Record<string, number | null>;
-type StudentState = {
-  absent: boolean;
-  followup_status: FollowupStatus | null;
-  notes: string;
-  difficulty: string;
-  guidance: string;
-  scores: ScoreMap;
-};
-type FormState = {
-  developed: string;
-  difficulties: string;
-  deliveries_completed: string;
-  next_steps: string;
-  general_notes: string;
-  previous_difficulties_status: PreviousDifficultyStatus | null;
-  previous_followup_notes: string;
-  team_scores: ScoreMap;
-  students: Record<string, StudentState>;
-};
+import { EvaluationMobile } from "./evaluation-mobile";
+import { StudentNotes } from "./student-notes";
+import {
+  emptyStudent,
+  setScore,
+  studentHasContent,
+  TEXT_FIELDS,
+  toScore,
+  type Criterion,
+  type FormState,
+  type PreviousEvaluation,
+  type StudentState,
+} from "./evaluation-state";
 
 export type EvaluationFormProps = {
   challengeId: string;
@@ -75,15 +66,7 @@ export type EvaluationFormProps = {
   monitorName: string | null;
   canEdit: boolean;
   lockedReason?: string;
-  previous: {
-    date: string;
-    monitorName: string | null;
-    teamAverage: number | null;
-    difficulties: string;
-    nextSteps: string;
-    developed: string;
-    students: Record<string, { followup_status: FollowupStatus | null; difficulty: string; average: number | null }>;
-  } | null;
+  previous: PreviousEvaluation | null;
   deliverables: { id: string; title: string; due_date: string | null; status: DeliverableStatus }[];
   canUpdateDeliverables: boolean;
   history: { changed_at: string; action: string; name: string | null }[];
@@ -91,33 +74,6 @@ export type EvaluationFormProps = {
   joinedLater: { count: number; firstDate: string } | null;
   canManage: boolean;
 };
-
-const TEXT_FIELDS = [
-  ["developed", "O que a equipe desenvolveu?"],
-  ["difficulties", "Quais dificuldades foram encontradas?"],
-  ["deliveries_completed", "Quais entregas foram concluídas?"],
-  ["next_steps", "O que precisa ser feito até o próximo acompanhamento?"],
-  ["general_notes", "Observações gerais"],
-] as const;
-
-function emptyStudent(): StudentState {
-  return { absent: false, followup_status: null, notes: "", difficulty: "", guidance: "", scores: {} };
-}
-
-function studentHasContent(s: StudentState) {
-  return s.absent || !!s.followup_status || !!s.notes.trim() || !!s.difficulty.trim() || !!s.guidance.trim() || Object.keys(s.scores).length > 0;
-}
-
-function toScore(map: ScoreMap, id: string): Score {
-  return id in map ? map[id] : undefined;
-}
-
-function setScore(map: ScoreMap, id: string, v: Score): ScoreMap {
-  const next = { ...map };
-  if (v === undefined) delete next[id];
-  else next[id] = v;
-  return next;
-}
 
 export function EvaluationForm(props: EvaluationFormProps) {
   const {
@@ -285,8 +241,203 @@ export function EvaluationForm(props: EvaluationFormProps) {
 
   const disabled = !canEdit || saving;
 
+  // ---- blocos usados tanto no desktop quanto no fluxo de celular
+  const restoreBanner = restore && (
+    <div className="flex flex-col gap-2 rounded-xl border border-warning/30 bg-warning-soft px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+      <span className="text-warning">Existem alterações não salvas deste dispositivo para esta avaliação.</span>
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            localStorage.removeItem(storageKey);
+            setRestore(null);
+          }}
+        >
+          Descartar
+        </Button>
+        <Button
+          size="sm"
+          onClick={() => {
+            setState(restore);
+            setRestore(null);
+          }}
+        >
+          Restaurar
+        </Button>
+      </div>
+    </div>
+  );
+
+  const previousBody = (inputDisabled: boolean) =>
+    previous && (
+      <div className="grid gap-4 border-t p-4 md:grid-cols-2">
+        <PrevBlock title="Dificuldades registradas" text={previous.difficulties} />
+        <PrevBlock title="Combinado para este acompanhamento" text={previous.nextSteps} />
+        <div className="md:col-span-2">
+          <p className="mb-2 text-sm font-medium">As dificuldades anteriores foram resolvidas?</p>
+          <div className="flex flex-wrap gap-1.5">
+            {(Object.keys(PREVIOUS_DIFFICULTY_STATUS) as PreviousDifficultyStatus[]).map((k) => (
+              <button
+                key={k}
+                type="button"
+                disabled={inputDisabled}
+                aria-pressed={state.previous_difficulties_status === k}
+                onClick={() => patch({ previous_difficulties_status: state.previous_difficulties_status === k ? null : k })}
+                className={cn(
+                  "h-9 rounded-lg border px-3 text-sm transition-colors disabled:opacity-60",
+                  state.previous_difficulties_status === k ? "border-brand bg-brand-soft font-medium text-brand" : "hover:bg-surface",
+                )}
+              >
+                {PREVIOUS_DIFFICULTY_STATUS[k]}
+              </button>
+            ))}
+          </div>
+          <Textarea
+            className="mt-2"
+            rows={2}
+            placeholder="Comentário sobre a evolução das dificuldades anteriores (opcional)"
+            value={state.previous_followup_notes}
+            disabled={inputDisabled}
+            onChange={(e) => patch({ previous_followup_notes: e.target.value })}
+          />
+        </div>
+      </div>
+    );
+
+  const deliverablesList = (
+    <ul className="flex flex-col gap-2.5">
+      {props.deliverables.map((d) => (
+        <li key={d.id} className="flex flex-col gap-1">
+          <div className="flex items-center justify-between gap-2 text-sm">
+            <span className="truncate">{d.title}</span>
+            {d.due_date && <span className="shrink-0 text-xs text-muted-foreground">{formatDate(d.due_date, "dd/MM")}</span>}
+          </div>
+          {props.canUpdateDeliverables ? (
+            <NativeSelect
+              className="h-8"
+              defaultValue={d.status}
+              aria-label={`Status de ${d.title}`}
+              onChange={(e) => {
+                const value = e.target.value;
+                startDeliverable(async () => {
+                  const r = await setDeliverableStatus(challengeId, d.id, value);
+                  if (r.ok) toast.success(`${d.title}: ${DELIVERABLE_STATUS[value as DeliverableStatus]}`);
+                  else toast.error(r.error);
+                });
+              }}
+            >
+              {Object.entries(DELIVERABLE_STATUS).map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </NativeSelect>
+          ) : (
+            <StatusBadge tone={DELIVERABLE_TONE[d.status]}>{DELIVERABLE_STATUS[d.status]}</StatusBadge>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+
+  const historyList = (
+    <ul className="flex flex-col gap-2 text-sm">
+      {props.history.map((h, i) => (
+        <li key={i} className="flex justify-between gap-2">
+          <span>{h.action === "INSERT" ? "Criada" : h.action === "UPDATE" ? "Alterada" : "Excluída"} {h.name && `por ${h.name}`}</span>
+          <span className="shrink-0 text-xs text-muted-foreground">{formatDateTime(h.changed_at)}</span>
+        </li>
+      ))}
+    </ul>
+  );
+
+  const joinedNotice = props.joinedLater && (
+    <div className="flex flex-col gap-3 border-t bg-warning-soft/60 px-5 py-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-warning">
+        {props.joinedLater.count === 1 ? "1 aluno entrou" : `${props.joinedLater.count} alunos entraram`} na equipe em{" "}
+        <strong>{formatDate(props.joinedLater.firstDate)}</strong>, depois deste dia, por isso{" "}
+        {props.joinedLater.count === 1 ? "não aparece" : "não aparecem"} aqui.
+      </p>
+      {props.canManage ? (
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={fixing}
+          onClick={() =>
+            startFixing(async () => {
+              const r = await backdateTeamMembers(challengeId, team.id);
+              if (r.ok) {
+                toast.success(r.message);
+                // recarrega para trazer os alunos; o que já foi digitado fica no backup local
+                window.location.reload();
+              } else toast.error(r.error);
+            })
+          }
+        >
+          {fixing && <Loader2Icon className="animate-spin" />}
+          Já estavam na equipe desde o início
+        </Button>
+      ) : (
+        <span className="text-xs text-muted-foreground">Peça à coordenação para ajustar a data de entrada.</span>
+      )}
+    </div>
+  );
+
+  const concludeButton = (triggerClassName: string) => (
+    <ConfirmDialog
+      title={status === "concluida" ? "Salvar correção?" : "Concluir acompanhamento?"}
+      description={
+        <span className="flex flex-col gap-1">
+          {missingTeamCriteria > 0 && (
+            <span className="text-warning">{missingTeamCriteria} critério(s) coletivo(s) sem preenchimento.</span>
+          )}
+          {pendingStudents > 0 && <span className="text-warning">{pendingStudents} aluno(s) sem avaliação individual.</span>}
+          {status === "concluida"
+            ? "A alteração ficará registrada no histórico da avaliação."
+            : "Você ainda poderá corrigir depois; as alterações ficam registradas no histórico."}
+        </span>
+      }
+      confirmLabel={status === "concluida" ? "Salvar correção" : "Concluir"}
+      onConfirm={() => save("concluida")}
+      trigger={
+        <Button disabled={saving || (status === "concluida" && !dirty)} className={triggerClassName}>
+          <CheckCircle2Icon /> {status === "concluida" ? "Salvar correção" : "Concluir"}
+        </Button>
+      }
+    />
+  );
+
   return (
-    <div className="flex flex-col gap-5 pb-24">
+    <>
+    <EvaluationMobile
+      challengeId={challengeId}
+      sessionId={sessionId}
+      sessionDate={sessionDate}
+      teamName={team.name}
+      students={students}
+      teamCriteria={teamCriteria}
+      studentCriteria={studentCriteria}
+      previous={previous}
+      state={state}
+      status={status}
+      canEdit={canEdit}
+      lockedReason={props.lockedReason}
+      saving={saving}
+      dirty={dirty}
+      patch={patch}
+      patchStudent={patchStudent}
+      onSaveDraft={() => void save("rascunho")}
+      onAutoSave={() => void save("rascunho", { silent: true })}
+      restoreBanner={restoreBanner}
+      joinedNotice={joinedNotice}
+      previousBody={previousBody(!canEdit)}
+      deliverables={props.deliverables.length > 0 ? deliverablesList : null}
+      history={props.history.length > 0 ? historyList : null}
+      concludeButton={concludeButton("h-11 w-full")}
+    />
+    {/* só esmaece: a barra de ações fixa ficaria fora do lugar com transform no pai */}
+    <Reveal distance={0} className="hidden flex-col gap-5 pb-24 md:flex">
       {/* Cabeçalho */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -318,32 +469,7 @@ export function EvaluationForm(props: EvaluationFormProps) {
         </div>
       )}
 
-      {restore && (
-        <div className="flex flex-col gap-2 rounded-xl border border-warning/30 bg-warning-soft px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-warning">Existem alterações não salvas deste dispositivo para esta avaliação.</span>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                localStorage.removeItem(storageKey);
-                setRestore(null);
-              }}
-            >
-              Descartar
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => {
-                setState(restore);
-                setRestore(null);
-              }}
-            >
-              Restaurar
-            </Button>
-          </div>
-        </div>
-      )}
+      {restoreBanner}
 
       {/* Acompanhamento anterior */}
       {previous && (
@@ -364,40 +490,7 @@ export function EvaluationForm(props: EvaluationFormProps) {
               <ChevronDownIcon className={cn("size-4 transition-transform", showPrev && "rotate-180")} />
             </span>
           </button>
-          {showPrev && (
-            <div className="grid gap-4 border-t p-4 md:grid-cols-2">
-              <PrevBlock title="Dificuldades registradas" text={previous.difficulties} />
-              <PrevBlock title="Combinado para este acompanhamento" text={previous.nextSteps} />
-              <div className="md:col-span-2">
-                <p className="mb-2 text-sm font-medium">As dificuldades anteriores foram resolvidas?</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(Object.keys(PREVIOUS_DIFFICULTY_STATUS) as PreviousDifficultyStatus[]).map((k) => (
-                    <button
-                      key={k}
-                      type="button"
-                      disabled={disabled}
-                      aria-pressed={state.previous_difficulties_status === k}
-                      onClick={() => patch({ previous_difficulties_status: state.previous_difficulties_status === k ? null : k })}
-                      className={cn(
-                        "h-9 rounded-lg border px-3 text-sm transition-colors disabled:opacity-60",
-                        state.previous_difficulties_status === k ? "border-brand bg-brand-soft font-medium text-brand" : "hover:bg-surface",
-                      )}
-                    >
-                      {PREVIOUS_DIFFICULTY_STATUS[k]}
-                    </button>
-                  ))}
-                </div>
-                <Textarea
-                  className="mt-2"
-                  rows={2}
-                  placeholder="Comentário sobre a evolução das dificuldades anteriores (opcional)"
-                  value={state.previous_followup_notes}
-                  disabled={disabled}
-                  onChange={(e) => patch({ previous_followup_notes: e.target.value })}
-                />
-              </div>
-            </div>
-          )}
+          <Collapse open={showPrev}>{previousBody(disabled)}</Collapse>
         </section>
       )}
 
@@ -454,53 +547,14 @@ export function EvaluationForm(props: EvaluationFormProps) {
             {props.deliverables.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nenhuma entrega cadastrada.</p>
             ) : (
-              <ul className="flex flex-col gap-2.5">
-                {props.deliverables.map((d) => (
-                  <li key={d.id} className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between gap-2 text-sm">
-                      <span className="truncate">{d.title}</span>
-                      {d.due_date && <span className="shrink-0 text-xs text-muted-foreground">{formatDate(d.due_date, "dd/MM")}</span>}
-                    </div>
-                    {props.canUpdateDeliverables ? (
-                      <NativeSelect
-                        className="h-8"
-                        defaultValue={d.status}
-                        aria-label={`Status de ${d.title}`}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          startDeliverable(async () => {
-                            const r = await setDeliverableStatus(challengeId, d.id, value);
-                            if (r.ok) toast.success(`${d.title}: ${DELIVERABLE_STATUS[value as DeliverableStatus]}`);
-                            else toast.error(r.error);
-                          });
-                        }}
-                      >
-                        {Object.entries(DELIVERABLE_STATUS).map(([v, l]) => (
-                          <option key={v} value={v}>
-                            {l}
-                          </option>
-                        ))}
-                      </NativeSelect>
-                    ) : (
-                      <StatusBadge tone={DELIVERABLE_TONE[d.status]}>{DELIVERABLE_STATUS[d.status]}</StatusBadge>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              deliverablesList
             )}
           </section>
 
           {props.history.length > 0 && (
             <section className="rounded-2xl border bg-card p-4">
               <h3 className="mb-3 font-semibold">Histórico de alterações</h3>
-              <ul className="flex flex-col gap-2 text-sm">
-                {props.history.map((h, i) => (
-                  <li key={i} className="flex justify-between gap-2">
-                    <span>{h.action === "INSERT" ? "Criada" : h.action === "UPDATE" ? "Alterada" : "Excluída"} {h.name && `por ${h.name}`}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">{formatDateTime(h.changed_at)}</span>
-                  </li>
-                ))}
-              </ul>
+              {historyList}
             </section>
           )}
         </aside>
@@ -515,43 +569,12 @@ export function EvaluationForm(props: EvaluationFormProps) {
           </span>
         </div>
 
-        {props.joinedLater && (
-          <div className="flex flex-col gap-3 border-t bg-warning-soft/60 px-5 py-4 text-sm sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-warning">
-              {props.joinedLater.count === 1 ? "1 aluno entrou" : `${props.joinedLater.count} alunos entraram`} na equipe em{" "}
-              <strong>{formatDate(props.joinedLater.firstDate)}</strong>, depois deste dia, por isso{" "}
-              {props.joinedLater.count === 1 ? "não aparece" : "não aparecem"} aqui.
-            </p>
-            {props.canManage ? (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={fixing}
-                onClick={() =>
-                  startFixing(async () => {
-                    const r = await backdateTeamMembers(challengeId, team.id);
-                    if (r.ok) {
-                      toast.success(r.message);
-                      // recarrega para trazer os alunos; o que já foi digitado fica no backup local
-                      window.location.reload();
-                    } else toast.error(r.error);
-                  })
-                }
-              >
-                {fixing && <Loader2Icon className="animate-spin" />}
-                Já estavam na equipe desde o início
-              </Button>
-            ) : (
-              <span className="text-xs text-muted-foreground">Peça à coordenação para ajustar a data de entrada.</span>
-            )}
-          </div>
-        )}
+        {joinedNotice}
         {students.length === 0 ? (
           <p className="border-t px-5 py-8 text-center text-sm text-muted-foreground">Nenhum aluno estava nesta equipe neste dia.</p>
         ) : (
           <>
-            {/* Desktop: tabela editável */}
-            <div className="hidden overflow-x-auto border-t md:block">
+            <div className="overflow-x-auto border-t">
               <table className="w-full text-sm">
                 <thead className="bg-surface text-left">
                   <tr>
@@ -662,13 +685,15 @@ export function EvaluationForm(props: EvaluationFormProps) {
                         {open && (
                           <tr className="bg-surface/40">
                             <td colSpan={studentCriteria.length + 5} className="px-4 py-3">
-                              <StudentNotes
-                                s={s}
-                                disabled={disabled}
-                                prevDifficulty={prev?.difficulty}
-                                onChange={(p) => patchStudent(st.id, p)}
-                                onFillRow={canEdit ? (v) => fillRow(st.id, v) : undefined}
-                              />
+                              <Collapse open appear>
+                                <StudentNotes
+                                  s={s}
+                                  disabled={disabled}
+                                  prevDifficulty={prev?.difficulty}
+                                  onChange={(p) => patchStudent(st.id, p)}
+                                  onFillRow={canEdit ? (v) => fillRow(st.id, v) : undefined}
+                                />
+                              </Collapse>
                             </td>
                           </tr>
                         )}
@@ -678,69 +703,6 @@ export function EvaluationForm(props: EvaluationFormProps) {
                 </tbody>
               </table>
             </div>
-
-            {/* Mobile: cartões */}
-            <ul className="flex flex-col gap-3 border-t p-3 md:hidden">
-              {students.map((st) => {
-                const s = state.students[st.id] ?? emptyStudent();
-                const avg = average(studentCriteria.map((c) => toScore(s.scores, c.id)));
-                const open = expanded[st.id];
-                const prev = previous?.students[st.id];
-                return (
-                  <li key={st.id} className={cn("rounded-xl border p-3", s.absent && "bg-surface/60")}>
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-medium">{st.full_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {st.registration ?? "Sem matrícula"} · média {formatAverage(avg)}
-                        </p>
-                      </div>
-                      <label className="flex items-center gap-1.5 text-xs">
-                        <input
-                          type="checkbox"
-                          className="size-4 accent-[var(--brand)]"
-                          checked={s.absent}
-                          disabled={disabled}
-                          onChange={(e) => patchStudent(st.id, { absent: e.target.checked })}
-                        />
-                        <UserXIcon className="size-3.5" /> Ausente
-                      </label>
-                    </div>
-                    {!s.absent && (
-                      <div className="mt-3 grid grid-cols-2 gap-2">
-                        {studentCriteria.map((c) => (
-                          <label key={c.id} className="flex items-center justify-between gap-2 text-xs">
-                            <span className="truncate">{c.name}</span>
-                            <ScoreSelect
-                              className="w-16 min-w-16"
-                              label={`${c.name} — ${st.full_name}`}
-                              value={toScore(s.scores, c.id)}
-                              disabled={disabled}
-                              onChange={(v) => patchStudent(st.id, { scores: setScore(s.scores, c.id, v) })}
-                            />
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                    <div className="mt-3">
-                      <FollowupSelect value={s.followup_status} disabled={disabled} onChange={(v) => patchStudent(st.id, { followup_status: v })} />
-                    </div>
-                    <button
-                      type="button"
-                      className="mt-2 text-xs font-medium text-brand"
-                      onClick={() => setExpanded((e) => ({ ...e, [st.id]: !open }))}
-                    >
-                      {open ? "Ocultar observações" : "Observações, dificuldade e orientação"}
-                    </button>
-                    {open && (
-                      <div className="mt-2">
-                        <StudentNotes s={s} disabled={disabled} prevDifficulty={prev?.difficulty} onChange={(p) => patchStudent(st.id, p)} />
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
           </>
         )}
       </section>
@@ -770,32 +732,13 @@ export function EvaluationForm(props: EvaluationFormProps) {
                   <SaveIcon /> Salvar rascunho
                 </Button>
               )}
-              <ConfirmDialog
-                title={status === "concluida" ? "Salvar correção?" : "Concluir acompanhamento?"}
-                description={
-                  <span className="flex flex-col gap-1">
-                    {missingTeamCriteria > 0 && (
-                      <span className="text-warning">{missingTeamCriteria} critério(s) coletivo(s) sem preenchimento.</span>
-                    )}
-                    {pendingStudents > 0 && <span className="text-warning">{pendingStudents} aluno(s) sem avaliação individual.</span>}
-                    {status === "concluida"
-                      ? "A alteração ficará registrada no histórico da avaliação."
-                      : "Você ainda poderá corrigir depois; as alterações ficam registradas no histórico."}
-                  </span>
-                }
-                confirmLabel={status === "concluida" ? "Salvar correção" : "Concluir"}
-                onConfirm={() => save("concluida")}
-                trigger={
-                  <Button disabled={saving || (status === "concluida" && !dirty)} className="max-sm:flex-1">
-                    <CheckCircle2Icon /> {status === "concluida" ? "Salvar correção" : "Concluir"}
-                  </Button>
-                }
-              />
+              {concludeButton("max-sm:flex-1")}
             </div>
           </div>
         </div>
       )}
-    </div>
+    </Reveal>
+    </>
   );
 }
 
@@ -842,54 +785,5 @@ function FollowupSelect({
         </option>
       ))}
     </NativeSelect>
-  );
-}
-
-function StudentNotes({
-  s,
-  disabled,
-  onChange,
-  prevDifficulty,
-  onFillRow,
-}: {
-  s: StudentState;
-  disabled?: boolean;
-  onChange: (p: Partial<StudentState>) => void;
-  prevDifficulty?: string;
-  onFillRow?: (v: Score) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-3">
-      {prevDifficulty && (
-        <p className="rounded-lg bg-brand-soft px-3 py-2 text-xs text-brand">Dificuldade anterior: {prevDifficulty}</p>
-      )}
-      <div className="grid gap-3 md:grid-cols-3">
-        <label className="flex flex-col gap-1 text-xs font-medium">
-          Observação individual
-          <Textarea rows={2} value={s.notes} disabled={disabled} onChange={(e) => onChange({ notes: e.target.value })} />
-        </label>
-        <label className="flex flex-col gap-1 text-xs font-medium">
-          Dificuldade identificada
-          <Textarea rows={2} value={s.difficulty} disabled={disabled} onChange={(e) => onChange({ difficulty: e.target.value })} />
-        </label>
-        <label className="flex flex-col gap-1 text-xs font-medium">
-          Orientação recomendada
-          <Textarea rows={2} value={s.guidance} disabled={disabled} onChange={(e) => onChange({ guidance: e.target.value })} />
-        </label>
-      </div>
-      {onFillRow && !s.absent && (
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          Aplicar a todos os critérios deste aluno:
-          {SCORE_VALUES.map((n) => (
-            <button key={n} type="button" disabled={disabled} onClick={() => onFillRow(n)} className="size-7 rounded-md border bg-card hover:bg-brand-soft">
-              {n}
-            </button>
-          ))}
-          <button type="button" disabled={disabled} onClick={() => onFillRow(null)} className="h-7 rounded-md border bg-card px-2 hover:bg-surface">
-            N/O
-          </button>
-        </div>
-      )}
-    </div>
   );
 }

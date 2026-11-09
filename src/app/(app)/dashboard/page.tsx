@@ -1,3 +1,4 @@
+import { Stagger, StaggerItem } from "@/components/shared/motion";
 import type { Metadata } from "next";
 import {
   CalendarCheckIcon,
@@ -37,21 +38,24 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   return (
     <PageContainer>
       <PageHeader title={`Olá, ${viewer.fullName.split(" ")[0]}`} description="Visão geral dos acompanhamentos." />
-      <DashboardFilters challenges={data.challenges.map((c) => ({ id: c.id, name: c.name }))} />
+      <Stagger>
+      <StaggerItem>
+        <DashboardFilters challenges={data.challenges.map((c) => ({ id: c.id, name: c.name }))} />
+      </StaggerItem>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6">
-        <StatCard label="Desafios ativos" value={data.activeChallenges} icon={TrophyIcon} />
-        <StatCard label="Equipes" value={data.teamCount} icon={UsersIcon} style={{ animationDelay: "40ms" }} />
-        <StatCard label="Alunos" value={data.studentCount} icon={GraduationCapIcon} style={{ animationDelay: "80ms" }} />
-        <StatCard label="Previstos" value={data.expected} hint="Sessões até hoje × equipes" icon={CalendarIcon} style={{ animationDelay: "120ms" }} />
-        <StatCard label="Realizados" value={data.done} hint={`${pct}% dos acompanhamentos previstos`} icon={CalendarCheckIcon} tone="success" style={{ animationDelay: "160ms" }} />
+        {/* no celular ficam só os dois números que pedem ação: realizados e pendentes */}
+        <StatCard label="Desafios ativos" value={data.activeChallenges} icon={TrophyIcon} className="max-sm:hidden" />
+        <StatCard label="Equipes" value={data.teamCount} icon={UsersIcon} className="max-sm:hidden" />
+        <StatCard label="Alunos" value={data.studentCount} icon={GraduationCapIcon} className="max-sm:hidden" />
+        <StatCard label="Previstos" value={data.expected} hint="Sessões até hoje × equipes" icon={CalendarIcon} className="max-sm:hidden" />
+        <StatCard label="Realizados" value={data.done} hint={`${pct}% dos acompanhamentos previstos`} icon={CalendarCheckIcon} tone="success" />
         <StatCard
           label="Pendentes"
           value={data.pending}
           hint={data.drafts ? `${data.drafts} em andamento` : undefined}
           icon={CalendarClockIcon}
           tone={data.pending ? "warning" : "success"}
-          style={{ animationDelay: "200ms" }}
         />
       </div>
 
@@ -72,6 +76,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
           <DeliverablesChart data={data.deliverableProgress} />
         </Panel>
       </div>
+      </Stagger>
     </PageContainer>
   );
 }

@@ -19,14 +19,17 @@ export function ScoreSegment({
   onChange,
   disabled,
   label,
+  fluid,
 }: {
   value: Score;
   onChange: (v: Score) => void;
   disabled?: boolean;
   label: string;
+  /** ocupa toda a largura, com alvos de toque maiores (celular) */
+  fluid?: boolean;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-1">
+    <div role="radiogroup" aria-label={label} className={fluid ? "grid grid-cols-6 gap-1.5" : "flex flex-wrap gap-1"}>
       {SCORE_VALUES.map((n) => {
         const selected = value === n;
         return (
@@ -38,7 +41,8 @@ export function ScoreSegment({
             disabled={disabled}
             onClick={() => onChange(selected ? undefined : n)}
             className={cn(
-              "size-9 rounded-lg border text-sm font-medium tabular-nums transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-60",
+              "rounded-lg border text-sm font-medium tabular-nums transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-60",
+              fluid ? "h-11 w-full" : "size-9",
               selected ? scoreColors[n] : "bg-card hover:border-brand/40 hover:bg-brand-soft",
             )}
           >
@@ -54,7 +58,8 @@ export function ScoreSegment({
         title="Não observado (não entra na média)"
         onClick={() => onChange(value === null ? undefined : null)}
         className={cn(
-          "h-9 rounded-lg border px-2.5 text-xs font-medium transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-60",
+          "rounded-lg border text-xs font-medium transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-60",
+          fluid ? "h-11 w-full" : "h-9 px-2.5",
           value === null ? "border-foreground/60 bg-foreground/80 text-background" : "bg-card text-muted-foreground hover:bg-surface",
         )}
       >

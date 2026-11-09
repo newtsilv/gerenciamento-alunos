@@ -1,3 +1,4 @@
+import { Stagger, StaggerItem } from "@/components/shared/motion";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangleIcon, CalendarCheckIcon, CalendarClockIcon, UsersIcon } from "lucide-react";
@@ -34,11 +35,13 @@ export default async function ChallengeOverview({ params, searchParams }: PagePr
   const pct = data.expected ? Math.round((data.done / data.expected) * 100) : 0;
 
   return (
-    <div className="flex flex-col gap-6">
-      <DashboardFilters
-        teams={teams.map((t) => ({ id: t.id, name: t.name }))}
-        monitors={monitors.map((m) => ({ id: m.id, name: m.name }))}
-      />
+    <Stagger className="flex flex-col gap-6">
+      <StaggerItem>
+        <DashboardFilters
+          teams={teams.map((t) => ({ id: t.id, name: t.name }))}
+          monitors={monitors.map((m) => ({ id: m.id, name: m.name }))}
+        />
+      </StaggerItem>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Equipes" value={data.teamCount} icon={UsersIcon} hint={`${data.studentCount} alunos`} />
@@ -76,6 +79,6 @@ export default async function ChallengeOverview({ params, searchParams }: PagePr
           <DeliverablesChart data={data.deliverableProgress} />
         </Panel>
       </div>
-    </div>
+    </Stagger>
   );
 }

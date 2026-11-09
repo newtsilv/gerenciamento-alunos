@@ -243,6 +243,25 @@
 }
 
 /* ------------------------------------------------------------------
+ * Teclado do celular (valores definidos em layout/keyboard-aware.tsx)
+ * ------------------------------------------------------------------ */
+:root {
+  --keyboard-inset: 0px;
+}
+/* espaço extra para os últimos campos conseguirem subir acima do teclado */
+body {
+  padding-bottom: var(--keyboard-inset);
+}
+[data-keyboard-open] .hide-on-keyboard {
+  display: none;
+}
+[data-keyboard-open] [data-slot="dialog-content"] {
+  top: calc((100dvh - var(--keyboard-inset)) / 2);
+  max-height: calc(100dvh - var(--keyboard-inset) - 1.5rem);
+  overflow-y: auto;
+}
+
+/* ------------------------------------------------------------------
  * Navegação inferior (celular): bolha flutuante com recorte na barra
  * ------------------------------------------------------------------ */
 :root {

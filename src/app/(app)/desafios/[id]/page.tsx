@@ -1,3 +1,4 @@
+import { Stagger, StaggerItem } from "@/components/shared/motion";
 import Link from "next/link";
 import { ChevronRightIcon, UsersIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,16 +37,18 @@ export default async function SessionsPage({ params, searchParams }: PageProps<"
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <Stagger className="flex flex-col gap-6">
       {canOpen && (
+        <StaggerItem>
         <DayPicker
           challengeId={id}
           today={today}
           scheduledDates={sessions.filter((s) => !s.is_extra && s.session_date <= today).map((s) => s.session_date)}
         />
+        </StaggerItem>
       )}
 
-      <section>
+      <StaggerItem as="section">
         <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
           <h2 className="font-semibold">Dias de acompanhamento</h2>
           {next && (
@@ -67,7 +70,7 @@ export default async function SessionsPage({ params, searchParams }: PageProps<"
               const pct = totalTeams ? Math.round((done / totalTeams) * 100) : 0;
               const isToday = s.session_date === today;
               return (
-                <li key={s.id} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center">
+                <StaggerItem as="li" key={s.id} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center">
                   <Link href={`/desafios/${id}/acompanhamentos/${s.id}`} className="group flex min-w-0 flex-1 items-center gap-4">
                     <div className="w-28 shrink-0">
                       <p className="font-medium group-hover:text-brand">{isToday ? "Hoje" : formatDate(s.session_date)}</p>
@@ -88,7 +91,7 @@ export default async function SessionsPage({ params, searchParams }: PageProps<"
                     ) : null}
                     <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground max-sm:hidden" />
                   </Link>
-                  <div className="flex gap-2 sm:shrink-0">
+                  <div className="flex gap-2 max-sm:hidden sm:shrink-0">
                     <DownloadButton
                       href={`/api/relatorios/diario?desafio=${id}&data=${s.session_date}`}
                       label="Baixar planilha"
@@ -96,7 +99,7 @@ export default async function SessionsPage({ params, searchParams }: PageProps<"
                       size="sm"
                     />
                   </div>
-                </li>
+                </StaggerItem>
               );
             })}
           </ul>
@@ -106,7 +109,7 @@ export default async function SessionsPage({ params, searchParams }: PageProps<"
             Ver todos os {past.length} dias
           </Link>
         )}
-      </section>
-    </div>
+      </StaggerItem>
+    </Stagger>
   );
 }

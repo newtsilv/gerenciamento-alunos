@@ -1,3 +1,4 @@
+import { StaggerItem } from "@/components/shared/motion";
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,7 +19,6 @@ export function StatCard({
   icon: Icon,
   tone = "info",
   className,
-  style,
 }: {
   label: string;
   value: ReactNode;
@@ -26,13 +26,11 @@ export function StatCard({
   icon?: LucideIcon;
   tone?: Tone;
   className?: string;
-  style?: React.CSSProperties;
 }) {
   return (
-    <div
-      style={style}
+    <StaggerItem
       className={cn(
-        "flex animate-fade-up items-start justify-between gap-3 rounded-2xl border bg-card p-4 sm:p-5 transition-shadow duration-300 hover:shadow-[0_8px_30px_-12px_rgb(0_0_0/0.12)]",
+        "flex items-start justify-between gap-3 rounded-2xl border bg-card p-4 sm:p-5 transition-shadow duration-300 hover:shadow-[0_8px_30px_-12px_rgb(0_0_0/0.12)]",
         className,
       )}
     >
@@ -46,6 +44,6 @@ export function StatCard({
           <Icon className="size-5" />
         </span>
       )}
-    </div>
+    </StaggerItem>
   );
 }
