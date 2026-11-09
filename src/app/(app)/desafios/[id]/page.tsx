@@ -11,6 +11,7 @@ import { listSessions, listTeams } from "@/lib/data/challenges";
 import { formatDate, todayISO } from "@/lib/domain/dates";
 
 const PAGE = 10;
+const UPCOMING = 2;
 
 export default async function SessionsPage({ params, searchParams }: PageProps<"/desafios/[id]">) {
   const { id } = await params;
@@ -20,10 +21,11 @@ export default async function SessionsPage({ params, searchParams }: PageProps<"
   const today = todayISO();
   const totalTeams = teams.length;
 
-  // abrir um dia sem registrar nada (por engano, por exemplo) não o coloca na lista
-  const past = sessions.filter((s) => s.session_date <= today && s.team_evaluations.length > 0).reverse();
-  const next = sessions.find((s) => s.session_date > today);
-  const visible = todos ? past : past.slice(0, PAGE);
+  // dias previstos sempre aparecem; dia fora do calendário só se tiver registro (senão foi aberto por engano)
+  const listed = sessions.filter((s) => !s.is_extra || s.team_evaluations.length > 0);
+  const past = listed.filter((s) => s.session_date <= today).reverse();
+  const future = listed.filter((s) => s.session_date > today);
+  const visible = todos ? [...listed].reverse() : [...future.slice(0, UPCOMING).reverse(), ...past.slice(0, PAGE)];
   const canOpen = access.canEvaluate || access.canManage;
 
   if (totalTeams === 0) {
@@ -50,22 +52,27 @@ export default async function SessionsPage({ params, searchParams }: PageProps<"
       )}
 
       <StaggerItem as="section">
-        <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
-          <h2 className="font-semibold">Dias de acompanhamento</h2>
-          {next && (
-            <p className="text-sm text-muted-foreground">
-              Próximo previsto: <span className="capitalize">{formatDate(next.session_date, "EEEE, dd/MM")}</span>
-            </p>
-          )}
-        </div>
+        <h2 className="mb-2 font-semibold">Dias de acompanhamento</h2>
 
-        {past.length === 0 ? (
+        {visible.length === 0 ? (
           <p className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
             Nenhum dia de acompanhamento ainda. {canOpen && "Escolha um dia acima para começar."}
           </p>
         ) : (
           <ul className="divide-y overflow-hidden rounded-2xl border bg-card">
             {visible.map((s) => {
+              if (s.session_date > today) {
+                return (
+                  <StaggerItem as="li" key={s.id} className="flex items-center gap-4 px-4 py-3">
+                    <div className="w-28 shrink-0">
+                      <p className="font-medium text-muted-foreground">{formatDate(s.session_date)}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{formatDate(s.session_date, "EEEE")}</p>
+                    </div>
+                    <p className="min-w-0 flex-1 text-xs text-muted-foreground">Disponível para registrar no dia</p>
+                    <StatusBadge className="max-sm:hidden">Previsto</StatusBadge>
+                  </StaggerItem>
+                );
+              }
               const done = s.team_evaluations.filter((e) => e.status === "concluida").length;
               const draft = s.team_evaluations.filter((e) => e.status === "rascunho").length;
               const pct = totalTeams ? Math.round((done / totalTeams) * 100) : 0;
@@ -87,6 +94,8 @@ export default async function SessionsPage({ params, searchParams }: PageProps<"
                     </div>
                     {done === totalTeams && totalTeams > 0 ? (
                       <StatusBadge tone="success" className="max-sm:hidden">Completo</StatusBadge>
+                    ) : done + draft === 0 ? (
+                      <StatusBadge className="max-sm:hidden">Nada registrado</StatusBadge>
                     ) : null}
                     <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground max-sm:hidden" />
                   </Link>
@@ -103,9 +112,9 @@ export default async function SessionsPage({ params, searchParams }: PageProps<"
             })}
           </ul>
         )}
-        {!todos && past.length > PAGE && (
+        {!todos && visible.length < listed.length && (
           <Link href={`/desafios/${id}?todos=1`} className="mt-3 inline-block text-sm font-medium text-brand hover:underline">
-            Ver todos os {past.length} dias
+            Ver todos os {listed.length} dias
           </Link>
         )}
       </StaggerItem>

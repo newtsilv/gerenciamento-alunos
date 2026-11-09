@@ -1,7 +1,8 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { EvaluationForm, type EvaluationFormProps } from "@/components/evaluation/evaluation-form";
 import { requireChallengeAccess } from "@/lib/auth";
 import { loadEvaluationContext } from "@/lib/data/evaluation";
+import { todayISO } from "@/lib/domain/dates";
 import { average } from "@/lib/domain/scores";
 
 export default async function EvaluationPage({ params }: PageProps<"/desafios/[id]/acompanhamentos/[sessionId]/[teamId]">) {
@@ -9,6 +10,7 @@ export default async function EvaluationPage({ params }: PageProps<"/desafios/[i
   const access = await requireChallengeAccess(id);
   const ctx = await loadEvaluationContext(sessionId, teamId);
   if (!ctx || ctx.session.challenge_id !== id) notFound();
+  if (ctx.session.session_date > todayISO()) redirect(`/desafios/${id}`); // só dá para registrar a partir do dia
 
   const ev = ctx.evaluation;
   const isOwner = !ev || ev.monitor_id === access.viewer.id;

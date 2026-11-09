@@ -1,5 +1,5 @@
 import { Reveal } from "@/components/shared/motion";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { DownloadButton } from "@/components/reports/download-button";
 import { SessionTeams } from "@/components/sessions/session-teams";
 import { requireChallengeAccess } from "@/lib/auth";
@@ -12,6 +12,7 @@ export default async function SessionPage({ params }: PageProps<"/desafios/[id]/
   const access = await requireChallengeAccess(id);
   const data = await loadSessionTeams(sessionId, id);
   if (!data) notFound();
+  if (data.session.session_date > todayISO()) redirect(`/desafios/${id}`); // só dá para registrar a partir do dia
   const isToday = data.session.session_date === todayISO();
 
   return (
